@@ -1,0 +1,35 @@
+# Slack app manifest for local development over Socket Mode.
+# Create the app at https://api.slack.com/apps → "From a manifest", then:
+#   - Install to workspace → SLACK_BOT_TOKEN (xoxb-)
+#   - Basic Information → App-Level Tokens → scope connections:write → SLACK_APP_TOKEN (xapp-)
+display_information:
+  name: Propsy
+  description: Give your teammates a propsy
+  background_color: "#2c2d30"
+features:
+  app_home:
+    home_tab_enabled: true
+    messages_tab_enabled: false
+    messages_tab_read_only_enabled: true
+  bot_user:
+    display_name: Propsy
+    always_online: false
+  slash_commands:
+    - command: /propsy
+      description: Give a propsy to a teammate
+      usage_hint: "@someone for being awesome"
+      should_escape: true # required: delivers mentions as <@U123|name>
+oauth_config:
+  scopes:
+    bot:
+      - commands
+      - chat:write # only used if PROPSY_ANNOUNCE_CHANNEL is set; then /invite the bot to that channel
+settings:
+  event_subscriptions:
+    bot_events:
+      - app_home_opened
+  interactivity:
+    is_enabled: false
+  org_deploy_enabled: false
+  socket_mode_enabled: true
+  token_rotation_enabled: false
