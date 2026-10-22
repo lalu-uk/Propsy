@@ -1,0 +1,44 @@
+# Slack app manifest (WITH the optional /dropsy command) for Cloud Run (HTTP). Replace https://YOUR-SERVICE.run.app.
+# Slack treats Socket Mode and HTTP URLs as mutually exclusive: use a separate app per mode.
+# Create the app at https://api.slack.com/apps → "From a manifest", install it → SLACK_BOT_TOKEN (xoxb-);
+# Basic Information → Signing Secret → SLACK_SIGNING_SECRET.
+display_information:
+  name: Propsy
+  description: Give your teammates a propsy
+  background_color: "#2c2d30"
+features:
+  app_home:
+    home_tab_enabled: true
+    messages_tab_enabled: false
+    messages_tab_read_only_enabled: true
+  bot_user:
+    display_name: Propsy
+    always_online: false
+  slash_commands:
+    - command: /propsy
+      description: Give a propsy to a teammate
+      usage_hint: "@someone for being awesome"
+      should_escape: true
+      url: https://YOUR-SERVICE.run.app/slack/commands
+    # Optional: lets people subtract propsies for the lulz. Only use this manifest
+    # if that fits your culture; the default manifest has no /dropsy.
+    - command: /dropsy
+      description: Give a dropsy to a teammate (takes a propsy away)
+      usage_hint: "@someone for being a menace"
+      should_escape: true
+      url: https://YOUR-SERVICE.run.app/slack/commands
+oauth_config:
+  scopes:
+    bot:
+      - commands
+      - chat:write # only used if PROPSY_ANNOUNCE_CHANNEL is set; then /invite the bot to that channel
+settings:
+  event_subscriptions:
+    request_url: https://YOUR-SERVICE.run.app/slack/events
+    bot_events:
+      - app_home_opened
+  interactivity:
+    is_enabled: false
+  org_deploy_enabled: false
+  socket_mode_enabled: false
+  token_rotation_enabled: false
