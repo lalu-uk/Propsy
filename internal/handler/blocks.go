@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/laluowen/Propsy/internal/config"
 	"github.com/laluowen/Propsy/internal/store"
 	"github.com/slack-go/slack"
 )
@@ -145,8 +146,70 @@ func totals(p, d int) string {
 
 var medals = []string{":first_place_medal:", ":second_place_medal:", ":third_place_medal:"}
 
+const (
+	// boardHardMax is the most rows a leaderboard ever shows, whatever is
+	// configured (config clamps the setting to this and warns; this is the
+	// backstop for Settings built directly), so a huge workspace can't push the
+	// Home tab past Slack's 100-blocks-per-view limit.
+	boardHardMax = config.MaxLeaderboardUsers
+	// maxSectionChars keeps each section well under Slack's 3000-char limit.
+	maxSectionChars = 2800
+)
+
+// boards are the two leaderboards, each sorted highest first. A cut field is
+// the row limit a board was truncated to, or 0 if it's complete.
+type boards struct {
+	received    []store.Entry // everyone who has received a propsy or dropsy, by score
+	receivedCut int
+	given       []store.Entry // everyone who has given one, by how many (propsies + dropsies)
+	givenCut    int
+}
+
+// boardBlocks renders a titled leaderboard of everyone in entries, split over
+// as many sections as Slack's size limit needs. Equal counts share a rank, and
+// the top three ranks with a positive count get medals. cut, if positive, is
+// the limit the board was truncated to, which the board then says.
+func boardBlocks(title string, entries []store.Entry, empty string, cut int) []slack.Block {
+	blocks := []slack.Block{section("*" + title + "*")}
+	if len(entries) == 0 {
+		return append(blocks, section("_"+empty+"_"))
+	}
+
+	var chunk strings.Builder
+	flush := func() {
+		if chunk.Len() > 0 {
+			blocks = append(blocks, section(chunk.String()))
+			chunk.Reset()
+		}
+	}
+	rank, prev := 0, 0
+	for i, e := range entries {
+		if i == 0 || e.Count != prev {
+			rank = i + 1
+		}
+		prev = e.Count
+		label := fmt.Sprintf("%d.", rank)
+		if rank <= len(medals) && e.Count > 0 {
+			label = medals[rank-1]
+		}
+		line := fmt.Sprintf("%s <@%s> — %d", label, e.UserID, e.Count)
+		if chunk.Len() > 0 && chunk.Len()+1+len(line) > maxSectionChars {
+			flush()
+		}
+		if chunk.Len() > 0 {
+			chunk.WriteByte('\n')
+		}
+		chunk.WriteString(line)
+	}
+	flush()
+	if cut > 0 {
+		blocks = append(blocks, section(fmt.Sprintf("_Showing the top %d._", cut)))
+	}
+	return blocks
+}
+
 // homeBlocks is the app home dashboard. q is nil when there are no limits.
-func homeBlocks(stats store.Stats, board []store.Entry, recent []store.Action, q *quota) []slack.Block {
+func homeBlocks(stats store.Stats, b boards, recent []store.Action, q *quota) []slack.Block {
 	summary := fmt.Sprintf("*Received:* %s\n*Given:* %s\nGive some with `/propsy @someone for being awesome`.",
 		totals(stats.PropsiesReceived, stats.DropsiesReceived), totals(stats.PropsiesGiven, stats.DropsiesGiven))
 	if q != nil {
@@ -156,25 +219,10 @@ func homeBlocks(stats store.Stats, board []store.Entry, recent []store.Action, q
 		slack.NewHeaderBlock(slack.NewTextBlockObject(slack.PlainTextType, "Propsy :raised_hands:", true, false)),
 		section(summary),
 		slack.NewDividerBlock(),
-		section("*Leaderboard*"),
 	}
-
-	if len(board) == 0 {
-		blocks = append(blocks, section("_No propsies yet — be the first!_"))
-	} else {
-		var b strings.Builder
-		for i, e := range board {
-			rank := fmt.Sprintf("%d.", i+1)
-			if i < len(medals) && e.Score > 0 {
-				rank = medals[i]
-			}
-			if i > 0 {
-				b.WriteByte('\n')
-			}
-			fmt.Fprintf(&b, "%s <@%s> — %d", rank, e.UserID, e.Score)
-		}
-		blocks = append(blocks, section(b.String()))
-	}
+	blocks = append(blocks, boardBlocks("Leaderboard: received", b.received, "No propsies yet — be the first!", b.receivedCut)...)
+	blocks = append(blocks, slack.NewDividerBlock())
+	blocks = append(blocks, boardBlocks("Leaderboard: given", b.given, "Nobody has given anything yet.", b.givenCut)...)
 
 	if len(recent) > 0 {
 		blocks = append(blocks, slack.NewDividerBlock(), section("*Recently received*"))
