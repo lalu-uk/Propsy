@@ -4,7 +4,7 @@ Self-hosted, scale-to-zero **kudos for Slack**, as a single static Go binary.
 
 - `/propsy @alice @bob for unblocking the release` gives each of them a propsy and announces it.
 - The app's **Home** tab shows your propsy and dropsy totals, how many you have left to give, a
-  leaderboard, and what you've recently received.
+  two leaderboards (received, and given), and what you've recently received.
 
 | Mode | `ENVIRONMENT` | Transport | Storage | Suited to |
 |---|---|---|---|---|
@@ -19,6 +19,7 @@ Self-hosted, scale-to-zero **kudos for Slack**, as a single static Go binary.
 | `PROPSY_LIMIT_PERIOD` | `30d` | Window length: it starts when someone first gives one, and the allowance resets in full once it has elapsed. Units `s`, `m`, `h`, `d`, `w`, combinable: `30s`, `24h`, `2w`, `1d12h`. |
 | `PROPSY_PER_PERSON_LIMIT` | `5` | Most one person can give any single other person per window. `0` = unlimited. |
 | `PROPSY_PER_PERSON_LIMIT_PERIOD` | `1d` | Window length for the per-person limit, same rules. |
+| `PROPSY_LEADERBOARD_MAX_USERS` | `0` | Most people each leaderboard lists. `0` = everyone. Hard maximum 1000: larger values are lowered to 1000 with a startup warning. |
 | `PROPSY_ANNOUNCE_CHANNEL` | _(unset)_ | Announce in this channel instead of where the command was run. Channel ID recommended (`C0123ABCDEF`); `#name` works for public channels. Invite the bot first. |
 
 Allowances reset in full once the period has elapsed, not gradually: your window opens when
@@ -31,11 +32,25 @@ arguments.
 
 `/dropsy @someone for being a menace` gives a dropsy, which takes a propsy away. It counts
 against the giver's limits like a propsy does, and the Home tab shows both totals
-(`Received: 5 propsies, 10 dropsies`). A person's leaderboard score is propsies minus
-dropsies, and negative scores are listed too (at the bottom). It's opt-in because it isn't a friendly
-pattern for every team: use `slack/manifest.socket.dropsy.yaml` /
+(`Received: 5 propsies, 10 dropsies`). A person's score on the received board is propsies minus
+dropsies, and negative scores are listed too (at the bottom). It's opt-in because it isn't a
+friendly pattern for every team: use `slack/manifest.socket.dropsy.yaml` /
 `slack/manifest.http.dropsy.yaml` instead of the default manifests to enable it. Without
 that command in the Slack app, nothing else changes.
+
+## Leaderboards
+
+The Home tab has two boards, and by default they list **everyone**:
+
+- **Received:** everyone who has received a propsy or dropsy, ranked by score (propsies minus
+  dropsies received), including zero and negative scores.
+- **Given:** everyone who has given a propsy or dropsy, ranked by how many they've given in total
+  (propsies and dropsies both count).
+
+Equal counts share a rank. Set `PROPSY_LEADERBOARD_MAX_USERS` to show only the top N of each
+board (a board that was cut says "Showing the top N."). There's a hard maximum of 1000 rows per
+board (about 13 of the 100 blocks Slack allows on a Home tab), so `0` means "everyone, up to
+1000", and a larger setting is lowered to 1000 with a warning in the startup log.
 
 See [`PLAN.md`](./PLAN.md) for design and roadmap, [`AGENTS.md`](./AGENTS.md) for dev notes.
 
