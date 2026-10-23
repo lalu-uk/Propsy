@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.2.2](https://github.com/lalu-uk/Propsy/compare/v1.2.1...v1.2.2) (2026-10-23)
+
+
+### Bug Fixes
+
+* **config:** warn when a named Firestore database forfeits the free tier ([1dbef6b](https://github.com/lalu-uk/Propsy/commit/1dbef6b8ef95e615e6ae8aa189ad1802d9a19eb9))
+* **config:** warn when a named Firestore database forfeits the free tier ([2bafa58](https://github.com/lalu-uk/Propsy/commit/2bafa58821e76ed5af3913c72215002dc04192d4))
+
 ## [1.2.1](https://github.com/lalu-uk/Propsy/compare/v1.2.0...v1.2.1) (2026-10-23)
 
 
