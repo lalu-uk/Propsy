@@ -171,6 +171,13 @@ share a rank. No composite index is needed anywhere.
   `release.preflight.fail_on_error` makes GoReleaser stop early if the tag is already
   published as an immutable release. Gated on CI passing. Actions pinned by SHA; Renovate keeps
   them fresh.
+- **README versions are release-managed.** The install instructions (mise pin, binary URL,
+  `ghcr.io/lalu-uk/propsy:<version>`, Cloud Run deploy, verification examples) show the current
+  version. release-please's generic updater rewrites them inside the release PR
+  (`extra-files` in `release-please-config.json` plus `x-release-please-*` markers in README.md),
+  so there's no extra post-release step, and the README at a release's tag names that same
+  release. mise's `@latest` needs no bump, but note mise's default 24 h `minimum_release_age`
+  hides a new release from `@latest` for a day, hence the exact pin alongside it.
 - **Supply chain: keyless signing, no keys or secrets.** Everything GoReleaser produces is
   signed with cosign using Sigstore keyless signing: the release job's GitHub OIDC token is
   exchanged for a short-lived certificate naming this repo's `release.yml`, and the signature
