@@ -3,13 +3,58 @@
 Self-hosted, scale-to-zero **kudos for Slack**, as a single static Go binary.
 
 - `/propsy @alice @bob for unblocking the release` gives each of them a propsy and announces it.
-- The app's **Home** tab shows your propsy and dropsy totals, how many you have left to give, a
-  two leaderboards (received, and given), and what you've recently received.
+- The app's **Home** tab shows your propsy and dropsy totals, how many you have left to give, two
+  leaderboards (received, and given), and what you've recently received.
 
 | Mode | `ENVIRONMENT` | Transport | Storage | Suited to |
 |---|---|---|---|---|
 | **Socket** | `local` (default) | Slack Socket Mode | SQLite | Local dev, a box you control |
 | **Webhook** | `gcp` | HTTP | Firestore | Cloud Run, scale-to-zero (~$0 idle) |
+
+## Install
+
+Latest release: **v1.2.0** <!-- x-release-please-version -->
+
+See the [releases page](https://github.com/lalu-uk/Propsy/releases) for notes.
+
+<!-- Everything between the start and end markers is bumped to each new version by release-please
+     (see release-please-config.json). Keep other version-like numbers out of the marked blocks. -->
+
+### mise
+
+[mise](https://mise.jdx.dev) installs the binary straight from the GitHub release:
+
+<!-- x-release-please-start-version -->
+```sh
+mise use -g github:lalu-uk/Propsy@latest   # the newest release
+mise use -g github:lalu-uk/Propsy@1.2.0    # or pin this exact version
+```
+<!-- x-release-please-end -->
+
+Then run `propsy`. By default mise holds releases back for 24 hours (`minimum_release_age`),
+so `@latest` only picks a release up a day after it's published; pin the exact version to get
+it straight away.
+
+### Binary
+
+<!-- x-release-please-start-version -->
+```sh
+# linux/amd64 shown; the other files are propsy_{linux,darwin,windows}_{amd64,arm64}[.exe]
+curl -fsSLO https://github.com/lalu-uk/Propsy/releases/download/v1.2.0/propsy_linux_amd64
+chmod +x propsy_linux_amd64
+```
+<!-- x-release-please-end -->
+
+### Container image
+
+<!-- x-release-please-start-version -->
+```sh
+docker pull ghcr.io/lalu-uk/propsy:v1.2.0
+```
+<!-- x-release-please-end -->
+
+There is no `latest` tag: always use an exact version. To check what you've downloaded, see
+[Verifying a release](#verifying-a-release).
 
 ## Configuration
 
@@ -75,7 +120,16 @@ Try `/propsy @someone for being great`, then open the app's Home tab.
 Use a separate Slack app from [`slack/manifest.http.yaml`](./slack/manifest.http.yaml)
 (Socket Mode and HTTP URLs are mutually exclusive). Env: `ENVIRONMENT=gcp`,
 `SLACK_BOT_TOKEN`, `SLACK_SIGNING_SECRET`, `GCP_PROJECT_ID`. The runtime service account
-needs `roles/datastore.user`. Deployment steps are tracked in `PLAN.md` §6.
+needs `roles/datastore.user`. Cloud Run runs the public image straight from ghcr (use an exact
+version: there's no `latest`):
+
+<!-- x-release-please-start-version -->
+```sh
+gcloud run deploy propsy --image=ghcr.io/lalu-uk/propsy:v1.2.0 --region=<region> ...
+```
+<!-- x-release-please-end -->
+
+Deployment steps are tracked in `PLAN.md` §6.
 
 ## Development
 
@@ -98,6 +152,7 @@ Everything is signed with [cosign](https://github.com/sigstore/cosign) using Sig
 was produced by this repository's release workflow. Each binary, `checksums.txt` and SBOM has
 a `<name>.sigstore.json` bundle beside it on the release.
 
+<!-- x-release-please-start-version -->
 ```sh
 # A binary (swap in your platform's file name):
 cosign verify-blob propsy_linux_amd64 \
@@ -106,14 +161,15 @@ cosign verify-blob propsy_linux_amd64 \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com
 
 # The container image (best: verify, then pin the digest it resolves to):
-cosign verify ghcr.io/lalu-uk/propsy:v1.2.3 \
+cosign verify ghcr.io/lalu-uk/propsy:v1.2.0 \
   --certificate-identity-regexp '(?i)^https://github\.com/lalu-uk/propsy/\.github/workflows/release\.yml@' \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com
 
 # Build provenance (which workflow run built it, from which commit):
 gh attestation verify propsy_linux_amd64 --repo lalu-uk/propsy
-gh attestation verify oci://ghcr.io/lalu-uk/propsy:v1.2.3 --repo lalu-uk/propsy
+gh attestation verify oci://ghcr.io/lalu-uk/propsy:v1.2.0 --repo lalu-uk/propsy
 ```
+<!-- x-release-please-end -->
 
 The identity is matched by regexp because the release workflow runs on `workflow_run`, so the
 certificate names the branch it ran on, not the tag.
