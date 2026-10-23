@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.1](https://github.com/lalu-uk/Propsy/compare/v1.2.0...v1.2.1) (2026-10-23)
+
+
+### Bug Fixes
+
+* **release:** generate SBOMs for the release binaries ([97b6b60](https://github.com/lalu-uk/Propsy/commit/97b6b60f3baaae93e2eca73383fb7c2588a067f5))
+
 ## [1.2.0](https://github.com/lalu-uk/Propsy/compare/v1.1.2...v1.2.0) (2026-10-23)
 
 
