@@ -58,6 +58,7 @@ jobs:
       packages: write # push the image to ghcr.io
       id-token: write # keyless signing (cosign) and attestations: the job's OIDC token
       attestations: write # store build provenance attestations
+      actions: read # verify CI for the tagged commit
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -66,6 +67,31 @@ jobs:
           # GoReleaser `{{ .Tag }}`/`{{ .Version }}` to build.
           ref: ${{ needs.release-please.outputs.tag_name }}
           fetch-depth: 0
+
+      - name: Verify CI for release commit
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          release_sha="$(git rev-parse HEAD)"
+          deadline=$((SECONDS + 600))
+          while (( SECONDS < deadline )); do
+            runs="$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/ci.yml/runs?head_sha=${release_sha}&per_page=100")"
+            if jq -e --arg sha "$release_sha" '
+              any(.workflow_runs[];
+                .head_sha == $sha and
+                .event == "push" and
+                .head_branch == "main" and
+                .status == "completed" and
+                .conclusion == "success"
+              )
+            ' <<< "$runs" > /dev/null; then
+              echo "CI passed for release commit ${release_sha}"
+              exit 0
+            fi
+            sleep 15
+          done
+          echo "No successful CI run found for release commit ${release_sha}" >&2
+          exit 1
 
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
