@@ -25,7 +25,7 @@ Run). See `PLAN.md` for design and roadmap.
 ## Design decisions
 
 - Pure-Go SQLite, **no CGO** (distroless static image, easy cross-compile). Don't switch drivers.
-- Firestore stores counters + a per-recipient subcollection so every query uses automatic
+- Firestore stores counters + a per-recipient subcollection + one board document so every query uses automatic
   single-field indexes. Don't add queries needing composite indexes without a provisioning story.
 - Replies go via `response_url`, not `chat.postMessage`, so the bot needn't be in the channel.
 - **Vocabulary:** "1 propsy", "5 propsies", "1 dropsy", "5 dropsies" in every user-facing string,
@@ -41,7 +41,14 @@ Run). See `PLAN.md` for design and roadmap.
   enforced atomically inside `Repository.AddActions` (which returns `*store.LimitError`), with the
   window maths in `store/limits.go` (`plan`), shared by both stores. Propsies and dropsies share
   them. They must stay user-visible, with the reset time (Home tab, `/propsy` usage).
-- The leaderboard lists everyone who has received a propsy or dropsy, including scores ≤ 0.
+- Two leaderboards, both listing *everyone* they cover (by default; `PROPSY_LEADERBOARD_MAX_USERS` sets a top-N,
+  and the hard maximum `config.MaxLeaderboardUsers` = 1000 always guards Slack's block limit:
+  config clamps larger values and returns a `Config.Warnings` entry that `main` logs): received (score = propsies − dropsies, scores ≤ 0 included) and given (propsies
+  + dropsies both count). In Firestore both boards live in one document, `boards/all`, updated
+  with atomic nested-map increments in `AddActions` (1 read per board fetch regardless of headcount;
+  the 1 MiB document limit means ~15k users, an accepted ceiling).
+- Home tabs are only built when opened (`app_home_opened`), never refreshed after a command: that
+  would put up to 11 Slack calls on the 3 s ack path.
 - `PROPSY_ANNOUNCE_CHANNEL` posts announcements with `chat:write`; any failure falls back to the
   `response_url` reply in the current channel.
 - Webhook handling is synchronous (response = ack, 3 s limit).
@@ -53,4 +60,4 @@ Local: `SLACK_BOT_TOKEN`, `SLACK_APP_TOKEN`, optional `DB_PATH` (default `./prop
 GCP: `ENVIRONMENT=gcp`, `SLACK_BOT_TOKEN`, `SLACK_SIGNING_SECRET`, `GCP_PROJECT_ID`,
 optional `PORT`, `FIRESTORE_DATABASE_ID`.
 Both: optional `PROPSY_LIMIT`, `PROPSY_LIMIT_PERIOD`, `PROPSY_PER_PERSON_LIMIT`,
-`PROPSY_PER_PERSON_LIMIT_PERIOD`, `PROPSY_ANNOUNCE_CHANNEL` (see `.env.example`).
+`PROPSY_PER_PERSON_LIMIT_PERIOD`, `PROPSY_LEADERBOARD_MAX_USERS`, `PROPSY_ANNOUNCE_CHANNEL` (see `.env.example`).

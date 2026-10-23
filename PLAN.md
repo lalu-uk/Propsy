@@ -10,8 +10,10 @@ vocabulary is fixed: "1 propsy", "5 propsies", "1 dropsy", "5 dropsies", everywh
   gets a propsy.
 - **App Home** dashboard: your totals (`Received: 5 propsies, 10 dropsies` /
   `Given: 3 propsies, 5 dropsies`; dropsies are hidden while zero), your remaining allowance,
-  an all-time **leaderboard** (top 10 by score = propsies − dropsies received, negative
-  scores included), and what you've recently received.
+  two all-time **leaderboards** that list everyone (no top-N): *received* (everyone who has
+  received a propsy or dropsy, by score = propsies − dropsies, negatives included) and
+  *given* (everyone who has given a propsy or dropsy, by how many in total), and what you've recently
+  received.
 
 Deliberately small. Non-goals for the MVP: multi-workspace/OAuth install, time-windowed
 leaderboards, channels/values/tags, rewards, an admin UI.
@@ -38,8 +40,10 @@ Single-workspace by design (bot token from env) — self-hosted per workspace.
 - Slash commands `/propsy` and `/dropsy` (and nothing else: any other name is refused),
   with **"Escape channels, users, and links"** on, so mentions
   arrive as `<@U123|name>` and can be parsed reliably.
-- Event `app_home_opened` → `views.publish` for the opener. Dashboards for the giver and
-  recipients are also refreshed (best-effort) after each command.
+- Event `app_home_opened` → `views.publish` for the opener. Home tabs are built only when
+  opened, never pushed after a command: a live refresh of the giver and every recipient meant
+  up to 11 sequential `views.publish` calls on the 3 s ack path, and a tab is rebuilt on
+  reopen anyway. The only staleness is a tab someone is already staring at.
 - Replies use the command's `response_url` (`in_channel` announcement, `ephemeral` errors).
   Unlike `chat.postMessage`, it works in channels the bot hasn't been invited to.
 - **Announce channel** (`PROPSY_ANNOUNCE_CHANNEL`, optional): announcements go there via
@@ -82,7 +86,7 @@ Single-workspace by design (bot token from env) — self-hosted per workspace.
 only exists if the Slack app has the command: the `*.dropsy.yaml` manifests add it, the
 default ones don't (no server-side flag; the manifest is the single opt-in). Semantics:
 propsies and dropsies are counted separately (received and given); both share the giver's
-rate limits; the leaderboard ranks by net score and includes anyone who has received one, even at
+rate limits; the received board ranks by net score and includes anyone who has received one, even at
 zero or below; Recent shows
 dropsies with a :droplet:. `slack/manifest_test.go`
 guards that each dropsy manifest differs from its base only by the `/dropsy` command.
@@ -96,20 +100,34 @@ free tier (50k reads / 20k writes per day, 1 GiB), so an idle Propsy costs ≈ $
 Layout:
 
 - `users/{id}` → counters `propsiesReceived`, `dropsiesReceived`, `propsiesGiven`,
-  `dropsiesGiven`, and `score` (`Increment`), plus the giver's overall rate-limit window
-  (`windowStart`, `windowUsed`).
+  `dropsiesGiven` (`Increment`), plus the giver's overall rate-limit window (`windowStart`,
+  `windowUsed`).
+- `boards/all` → both leaderboards in **one document**: `received` (user ID → score) and
+  `given` (user ID → count), bumped with atomic nested-map increments inside `AddActions`.
 - `users/{id}/received/{auto}` → `{from, to, reason, channelId, delta, createdAt}`.
 - `users/{from}/pairs/{to}` → the per-person window (`windowStart`, `windowUsed`).
 
 `AddActions` is one transaction: read the windows, check them (shared pure logic in
 `store/limits.go`, so SQLite and Firestore can't disagree), then write the `received`
 docs, counters and windows. A limit hit returns a `*LimitError` with nothing written.
-Limits cost O(1) reads, with no per-action history to count. Leaderboard =
-`users ORDER BY score DESC LIMIT 10` (an O(10) read, no scan; only users with a `score`,
-i.e. who have received something, are listed). Recent = `received` subcollection
-`ORDER BY createdAt DESC`. Everything uses only automatic single-field indexes — no
-composite index to provision. Ties on the leaderboard are ordered arbitrarily in
-Firestore (alphabetical in SQLite); acceptable for MVP.
+Limits cost O(1) reads, with no per-action history to count.
+
+Leaderboards are a single read of `boards/all` and a sort in Go, so a Home tab costs ~8
+Firestore reads (boards 1, stats 1, allowance 1, recent ≤5) whatever the headcount. The
+alternative, ordering `users` by a counter, is one billed read per row, so it scales with
+people × Home opens. The price is Firestore's 1 MiB document limit: about 15,000 users, after
+which `AddActions` would start failing. That's an explicit, accepted limit (a workspace that big
+can shard the boards). By default the boards cover everyone; `PROPSY_LEADERBOARD_MAX_USERS` (0 = everyone)
+sets a top-N instead. Either way there's a hard maximum, `config.MaxLeaderboardUsers` (1000 rows per board),
+to stay inside Slack's Home-tab block limit: config lowers a larger setting to 1000 and logs a
+warning at startup (a soft clamp rather than a startup failure, since the intent is still
+"a lot"), and the handler clamps again as a backstop. The handler reads N+1 rows so a board that was
+cut says "Showing the top N." while one that merely has N people doesn't. A top-N saves
+nothing on Firestore reads (a board is one document read whatever its size); it only
+shortens the tab. Long boards are split across sections of at most 2800
+characters (Slack's limit is 3000). Recent = `received` subcollection `ORDER BY createdAt
+DESC`. Ties are broken by user ID so the order is stable between renders, and equal counts
+share a rank. No composite index is needed anywhere.
 
 ## 4. Cloud Run
 
@@ -147,5 +165,5 @@ Firestore (alphabetical in SQLite); acceptable for MVP.
    HTTP manifest at the service; verify `/propsy` and Home over HTTP. Capture the exact
    commands (or Terraform) in `deploy/` + README, and consider a release-triggered deploy
    job using Workload Identity Federation.
-4. **Later, if wanted:** time-windowed leaderboard, "most given" leaderboard, a message
+4. **Later, if wanted:** time-windowed leaderboards, a message
    shortcut for giving a propsy, `PROPSY_REQUIRE_REASON`, `LOG_FORMAT=json` for Cloud Logging.
