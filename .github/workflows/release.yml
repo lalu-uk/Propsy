@@ -30,14 +30,23 @@ jobs:
       # Maintains a standing "chore(main): release X.Y.Z" PR summarizing
       # every Conventional Commit merged since the last release (feat: ->
       # minor, fix: -> patch, "!"/"BREAKING CHANGE:" -> major; chore:/docs:/
-      # ci:-only changes get no PR at all). Merging that PR is what actually
-      # tags + publishes the release — so this step is a no-op push-button
-      # on every other merge, and does the real work only on that one.
+      # ci:-only changes get no PR at all). Merging that PR is what cuts the
+      # release, and this step is a no-op on every other merge.
+      #
+      # This org uses GitHub immutable releases, where a published release's
+      # assets and tag are frozen. So release-please only creates a DRAFT
+      # release (config: "draft": true) and pushes its tag right away
+      # ("force-tag-creation": without it GitHub withholds the tag until
+      # publish, and release-please then can't find the previous release and
+      # proposes a bogus next-major release). The goreleaser job below uploads
+      # every asset to that draft and publishes it. Config lives in
+      # release-please-config.json / .release-please-manifest.json.
       - name: release-please
         id: release
         uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
         with:
-          release-type: go
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
 
   goreleaser:
     needs: release-please
@@ -46,9 +55,9 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          # release-please pushed this tag via the GitHub API moments ago;
-          # checking it out explicitly (rather than the default branch tip)
-          # is what gives GoReleaser `{{ .Tag }}`/`{{ .Version }}` to build.
+          # release-please pushed this tag moments ago; checking it out
+          # explicitly (rather than the default branch tip) is what gives
+          # GoReleaser `{{ .Tag }}`/`{{ .Version }}` to build.
           ref: ${{ needs.release-please.outputs.tag_name }}
           fetch-depth: 0
 
@@ -71,10 +80,13 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       # Cross-compiles binaries for linux/darwin/windows x amd64/arm64 (see
-      # `builds` in .goreleaser.yaml), archives + checksums them onto the
-      # GitHub Release release-please just created, and builds/pushes the
-      # linux/amd64+arm64 ghcr.io image. `release.mode: keep-existing` means
-      # it attaches to that release rather than fighting it over the notes.
+      # `builds` in .goreleaser.yaml), pushes the linux/amd64+arm64 ghcr.io
+      # image, uploads the binaries and checksums to the DRAFT release
+      # release-please created, and finally publishes the draft
+      # (`release.use_existing_draft` + `draft: false`), at which point GitHub
+      # makes it immutable. If this job fails before that, the draft is still
+      # unsealed: fix the cause and re-run the failed job (the release-please
+      # outputs are reused, so the job gets the same tag).
       - uses: goreleaser/goreleaser-action@a4f02ab5355a589de60d917a659ce617ed19b3de # v7.3.0
         with:
           args: release --clean
