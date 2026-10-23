@@ -80,6 +80,13 @@ GoReleaser uploads every asset to that draft (`release.use_existing_draft`) and 
 after the GoReleaser job, and never create the release published. If the job fails before the
 publish, re-run the failed job.
 
+The README's install instructions carry the current release version (mise pin, binary URL, image
+tag, verification examples). release-please bumps them in each release PR: `release-please-config.json`
+lists README.md under `extra-files`, and the lines to bump sit between
+`<!-- x-release-please-start-version -->` and `<!-- x-release-please-end -->` (or on a line marked
+`x-release-please-version`). Don't edit those versions by hand, and keep other version-like numbers
+(Go versions and so on) out of the marked blocks: every semver-looking string in them is replaced.
+
 Everything GoReleaser builds is signed keylessly with cosign (`signs`, `docker_signs`, plus Syft
 SBOMs and `actions/attest` provenance; see `PLAN.md` §5 and the README's "Verifying a release").
 Signing needs the CI OIDC token, so locally use `goreleaser release --snapshot --clean
