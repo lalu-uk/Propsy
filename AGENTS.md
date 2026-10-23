@@ -25,6 +25,7 @@ Run). See `PLAN.md` for design and roadmap.
 ## Design decisions
 
 - Pure-Go SQLite, **no CGO** (distroless static image, easy cross-compile). Don't switch drivers.
+  SQLite itself is due to be replaced by a JSON-file store (`PLAN.md` §3, "Local storage").
 - Firestore stores counters + a per-recipient subcollection + one board document so every query uses automatic
   single-field indexes. Don't add queries needing composite indexes without a provisioning story.
 - Replies go via `response_url`, not `chat.postMessage`, so the bot needn't be in the channel.
