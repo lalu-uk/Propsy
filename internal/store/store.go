@@ -34,10 +34,24 @@ func (s Stats) Score() int { return s.PropsiesReceived - s.DropsiesReceived }
 // ErrBadDelta is returned by AddActions when Action.Delta is not +1 or -1.
 var ErrBadDelta = errors.New("action delta must be +1 or -1")
 
-// Entry is one leaderboard row.
+// Board selects a leaderboard.
+type Board int
+
+// The leaderboards.
+const (
+	// BoardReceived ranks everyone who has received a propsy or dropsy by
+	// score: propsies received minus dropsies received (so it can be zero or
+	// negative).
+	BoardReceived Board = iota + 1
+	// BoardGiven ranks everyone who has given a propsy or dropsy by how many
+	// they've given in total (propsies and dropsies both count).
+	BoardGiven
+)
+
+// Entry is one leaderboard row; Count is the board's measure.
 type Entry struct {
 	UserID string
-	Score  int
+	Count  int
 }
 
 // Repository persists propsies and dropsies and serves the aggregates the app
@@ -53,10 +67,9 @@ type Repository interface {
 	Allowance(ctx context.Context, userID string, period time.Duration, now time.Time) (Allowance, error)
 	// Stats returns zero totals for an unknown user.
 	Stats(ctx context.Context, userID string) (Stats, error)
-	// Leaderboard returns up to limit users by score, highest first. It
-	// includes everyone who has received a propsy or dropsy, so scores can be
-	// zero or negative.
-	Leaderboard(ctx context.Context, limit int) ([]Entry, error)
+	// Leaderboard returns up to limit entries of board, highest first. Everyone
+	// the board covers is eligible: there's no cut-off but limit.
+	Leaderboard(ctx context.Context, board Board, limit int) ([]Entry, error)
 	// Recent returns up to limit propsies and dropsies received by userID,
 	// newest first.
 	Recent(ctx context.Context, userID string, limit int) ([]Action, error)

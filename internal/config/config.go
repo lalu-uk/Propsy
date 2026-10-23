@@ -14,6 +14,11 @@ const (
 	EnvGCP   = "gcp"   // HTTP webhooks + Firestore, for Cloud Run
 )
 
+// MaxLeaderboardUsers is the most people a leaderboard ever lists, whatever
+// PROPSY_LEADERBOARD_MAX_USERS says: 1000 rows is ~13 blocks, and Slack rejects
+// a Home tab over 100 blocks.
+const MaxLeaderboardUsers = 1000
+
 // Config holds runtime settings. Fields unused by the active mode are zero.
 type Config struct {
 	Environment string // EnvLocal | EnvGCP
@@ -29,6 +34,14 @@ type Config struct {
 	LimitPeriod          time.Duration
 	PerPersonLimit       int
 	PerPersonLimitPeriod time.Duration
+
+	// LeaderboardMaxUsers caps how many people each leaderboard lists; 0 lists
+	// everyone, up to MaxLeaderboardUsers, which also bounds any larger value.
+	LeaderboardMaxUsers int
+
+	// Warnings are non-fatal notes about the configuration (a value that was
+	// adjusted, say) for the caller to log.
+	Warnings []string
 
 	// AnnounceChannel, if set, is where propsies/dropsies are announced
 	// instead of the channel the command was run in: a channel ID (C0123…,
@@ -67,6 +80,17 @@ func Load() (*Config, error) {
 		return nil, err
 	}
 	c.AnnounceChannel = os.Getenv("PROPSY_ANNOUNCE_CHANNEL")
+	if c.LeaderboardMaxUsers, err = envInt("PROPSY_LEADERBOARD_MAX_USERS", 0); err != nil {
+		return nil, err
+	}
+	if c.LeaderboardMaxUsers < 0 {
+		return nil, fmt.Errorf("PROPSY_LEADERBOARD_MAX_USERS must be >= 0 (0 = everyone), got %d", c.LeaderboardMaxUsers)
+	}
+	if c.LeaderboardMaxUsers > MaxLeaderboardUsers {
+		c.Warnings = append(c.Warnings, fmt.Sprintf("PROPSY_LEADERBOARD_MAX_USERS=%d is above the maximum of %d; using %d",
+			c.LeaderboardMaxUsers, MaxLeaderboardUsers, MaxLeaderboardUsers))
+		c.LeaderboardMaxUsers = MaxLeaderboardUsers
+	}
 
 	var missing []string
 	if c.SlackBotToken == "" {

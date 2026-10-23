@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -43,7 +44,7 @@ func TestPluralNouns(t *testing.T) {
 }
 
 func TestHomeBlocksEmpty(t *testing.T) {
-	out := render(t, homeBlocks(store.Stats{}, nil, nil, nil))
+	out := render(t, homeBlocks(store.Stats{}, boards{}, nil, nil))
 	assertContains(t, out, "*Received:* 0 propsies", "*Given:* 0 propsies", "No propsies yet")
 	for _, unwanted := range []string{"dropsies", "Recently received", "available"} {
 		if strings.Contains(out, unwanted) {
@@ -53,7 +54,7 @@ func TestHomeBlocksEmpty(t *testing.T) {
 }
 
 func TestHomeBlocksPopulated(t *testing.T) {
-	board := []store.Entry{{UserID: "UA", Score: 5}, {UserID: "UB", Score: 4}, {UserID: "UC", Score: 3}, {UserID: "UD", Score: 1}}
+	board := []store.Entry{{UserID: "UA", Count: 5}, {UserID: "UB", Count: 4}, {UserID: "UC", Count: 3}, {UserID: "UD", Count: 1}}
 	recent := []store.Action{
 		{From: "UB", Reason: "thanks", CreatedAt: time.Unix(1700000000, 0).UTC(), Delta: 1},
 		{From: "UC", Reason: "lol", CreatedAt: time.Unix(1700000000, 0).UTC(), Delta: -1},
@@ -61,10 +62,11 @@ func TestHomeBlocksPopulated(t *testing.T) {
 	stats := store.Stats{PropsiesReceived: 5, DropsiesReceived: 10, PropsiesGiven: 3, DropsiesGiven: 1}
 	resets := time.Unix(1700000000, 0)
 	q := &quota{used: 190, limit: 200, period: 30 * 24 * time.Hour, resetsAt: resets, perPerson: 5, perPersonPeriod: 24 * time.Hour}
-	out := render(t, homeBlocks(stats, board, recent, q))
+	out := render(t, homeBlocks(stats, boards{received: board, given: []store.Entry{{UserID: "UB", Count: 7}}}, recent, q))
 	assertContains(t, out,
 		"*Received:* 5 propsies, 10 dropsies", "*Given:* 3 propsies, 1 dropsy",
-		":first_place_medal: <@UA> — 5", ":third_place_medal: <@UC> — 3", "4. <@UD> — 1",
+		"Leaderboard: received", ":first_place_medal: <@UA> — 5", ":third_place_medal: <@UC> — 3", "4. <@UD> — 1",
+		"Leaderboard: given", ":first_place_medal: <@UB> — 7",
 		"Recently received", "<@UB> gave you a propsy: thanks", ":droplet: <@UC> gave you a dropsy: lol",
 		"You have *10* propsies/dropsies available, resetting to 200 <!date^1700000000^{date_short_pretty} at {time}|2023-11-14 22:13 UTC>.",
 		"You can give any one person up to 5 per 1d",
@@ -72,17 +74,17 @@ func TestHomeBlocksPopulated(t *testing.T) {
 }
 
 func TestSingularNounsOnHome(t *testing.T) {
-	out := render(t, homeBlocks(store.Stats{PropsiesReceived: 1, DropsiesReceived: 1, PropsiesGiven: 1}, nil, nil, nil))
+	out := render(t, homeBlocks(store.Stats{PropsiesReceived: 1, DropsiesReceived: 1, PropsiesGiven: 1}, boards{}, nil, nil))
 	assertContains(t, out, "*Received:* 1 propsy, 1 dropsy", "*Given:* 1 propsy")
 }
 
 func TestQuotaNeverShowsNegative(t *testing.T) {
-	out := render(t, homeBlocks(store.Stats{}, nil, nil, &quota{used: 205, limit: 200, period: 24 * time.Hour, resetsAt: time.Unix(1700000000, 0)}))
+	out := render(t, homeBlocks(store.Stats{}, boards{}, nil, &quota{used: 205, limit: 200, period: 24 * time.Hour, resetsAt: time.Unix(1700000000, 0)}))
 	assertContains(t, out, "*0* propsies/dropsies available, resetting to 200")
 }
 
 func TestQuotaWithOnlyPerPersonLimit(t *testing.T) {
-	out := render(t, homeBlocks(store.Stats{}, nil, nil, &quota{perPerson: 3, perPersonPeriod: 12 * time.Hour}))
+	out := render(t, homeBlocks(store.Stats{}, boards{}, nil, &quota{perPerson: 3, perPersonPeriod: 12 * time.Hour}))
 	assertContains(t, out, "up to 3 per 12h0m0s")
 	if strings.Contains(out, "available") {
 		t.Errorf("no overall limit configured, so no 'available' line: %s", out)
@@ -122,7 +124,7 @@ func TestFormatPeriod(t *testing.T) {
 }
 
 func TestQuotaBeforeFirstUse(t *testing.T) {
-	out := render(t, homeBlocks(store.Stats{}, nil, nil, &quota{limit: 200, period: 30 * 24 * time.Hour}))
+	out := render(t, homeBlocks(store.Stats{}, boards{}, nil, &quota{limit: 200, period: 30 * 24 * time.Hour}))
 	assertContains(t, out, "*200* propsies/dropsies available (it resets 30d after you first use one).")
 }
 
@@ -169,7 +171,61 @@ func TestLimitMessages(t *testing.T) {
 	}
 }
 
-func TestLeaderboardShowsNegativeScores(t *testing.T) {
-	out := render(t, homeBlocks(store.Stats{}, []store.Entry{{UserID: "UA", Score: 2}, {UserID: "UB", Score: -3}}, nil, nil))
-	assertContains(t, out, "<@UA> — 2", "2. <@UB> — -3")
+func TestEveryoneOnTheBoardsIsListed(t *testing.T) {
+	out := render(t, homeBlocks(store.Stats{}, boards{
+		received: []store.Entry{{UserID: "UA", Count: 2}, {UserID: "UB", Count: 0}, {UserID: "UC", Count: -3}},
+		given:    []store.Entry{{UserID: "UD", Count: 4}, {UserID: "UE", Count: 0}},
+	}, nil, nil))
+	assertContains(t, out,
+		":first_place_medal: <@UA> — 2", "2. <@UB> — 0", "3. <@UC> — -3", // no medals at zero or below
+		":first_place_medal: <@UD> — 4", "2. <@UE> — 0")
+}
+
+func TestBoardTiesShareARank(t *testing.T) {
+	out := render(t, boardBlocks("T", []store.Entry{
+		{UserID: "UA", Count: 5}, {UserID: "UB", Count: 5}, {UserID: "UC", Count: 3}, {UserID: "UD", Count: 3}, {UserID: "UE", Count: 1},
+	}, "none", 0))
+	assertContains(t, out,
+		":first_place_medal: <@UA> — 5", ":first_place_medal: <@UB> — 5",
+		":third_place_medal: <@UC> — 3", ":third_place_medal: <@UD> — 3", "5. <@UE> — 1")
+}
+
+func TestEmptyBoards(t *testing.T) {
+	assertContains(t, render(t, homeBlocks(store.Stats{}, boards{}, nil, nil)),
+		"No propsies yet", "Nobody has given anything yet")
+}
+
+// A big workspace must be listed in full, split over sections that each fit
+// Slack's text limit, and the whole view must stay within its block limit.
+func TestBigBoardIsChunkedNotTruncated(t *testing.T) {
+	var entries []store.Entry
+	for i := 0; i < 900; i++ {
+		entries = append(entries, store.Entry{UserID: fmt.Sprintf("U%010d", i), Count: 900 - i})
+	}
+	blocks := homeBlocks(store.Stats{}, boards{received: entries, given: entries}, nil, nil)
+	if len(blocks) > 100 {
+		t.Fatalf("home view has %d blocks, Slack allows 100", len(blocks))
+	}
+	out := render(t, blocks)
+	for _, id := range []string{"U0000000000", "U0000000450", "U0000000899"} {
+		if strings.Count(out, "<@"+id+">") != 2 { // once per board
+			t.Errorf("%s should be on both boards", id)
+		}
+	}
+	for _, b := range blocks {
+		if sec, ok := b.(*slack.SectionBlock); ok && len(sec.Text.Text) > 3000 {
+			t.Errorf("section is %d chars, over Slack's 3000 limit", len(sec.Text.Text))
+		}
+	}
+	if strings.Contains(out, "Showing the top") {
+		t.Errorf("900 rows is under the cap; no truncation note expected")
+	}
+}
+
+func TestBoardSaysWhenItWasCut(t *testing.T) {
+	entries := []store.Entry{{UserID: "UA", Count: 3}, {UserID: "UB", Count: 2}}
+	assertContains(t, render(t, boardBlocks("T", entries, "none", 2)), "Showing the top 2.")
+	if strings.Contains(render(t, boardBlocks("T", entries, "none", 0)), "Showing the top") {
+		t.Error("a complete board must not claim to be cut")
+	}
 }
