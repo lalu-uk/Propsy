@@ -44,8 +44,13 @@ func TestLoadGCP(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Load: %v", err)
 	}
-	if c.Port != "8080" || c.FirestoreDatabaseID != "(default)" || c.GCPProjectID != "proj" {
+	if c.Port != "8080" || c.FirestoreDatabaseID != "(default)" || c.GCPProjectID != "proj" || len(c.Warnings) != 0 {
 		t.Errorf("got %+v", c)
+	}
+
+	t.Setenv("FIRESTORE_DATABASE_ID", "propsy")
+	if c, err = Load(); err != nil || len(c.Warnings) != 1 || !strings.Contains(c.Warnings[0], "free quota") {
+		t.Errorf("named database: got warnings=%v, err=%v; want one free-quota warning", c.Warnings, err)
 	}
 }
 

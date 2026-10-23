@@ -103,6 +103,10 @@ func Load() (*Config, error) {
 		c.SlackSigningSecret = os.Getenv("SLACK_SIGNING_SECRET")
 		c.GCPProjectID = os.Getenv("GCP_PROJECT_ID")
 		c.FirestoreDatabaseID = envOr("FIRESTORE_DATABASE_ID", "(default)")
+		if c.FirestoreDatabaseID != "(default)" {
+			c.Warnings = append(c.Warnings, fmt.Sprintf("FIRESTORE_DATABASE_ID=%q is a named database: Firestore's free quota only covers (default), so every read and write is billed",
+				c.FirestoreDatabaseID))
+		}
 		if c.SlackSigningSecret == "" {
 			missing = append(missing, "SLACK_SIGNING_SECRET")
 		}

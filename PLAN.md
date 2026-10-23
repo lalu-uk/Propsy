@@ -97,6 +97,51 @@ Firestore over Spanner/Cloud SQL: Spanner has a ~$65/mo/node floor (granular ins
 ~$0.09/hr) and Cloud SQL bills for an always-on VM; Firestore is pay-per-operation with a
 free tier (50k reads / 20k writes per day, 1 GiB), so an idle Propsy costs ≈ $0.
 
+Reviewed again in Oct 2026 against the goal of being serverless and free:
+
+- **Budget.** A give costs `1 + N` reads and `3N + 2` writes for N recipients (so 5 writes
+  for one recipient, 32 for ten), and a Home tab costs ~8 reads. The daily free tier covers
+  ~4,000 single-recipient gives or ~6,000 Home opens. Only the `(default)` database gets
+  the free quota; config warns if `FIRESTORE_DATABASE_ID` names another one.
+- **Datastore mode** has the same pricing and free tier with an older API, so there's no
+  reason to switch.
+- **One Cloud Storage object** (a JSON or SQLite blob written with `ifGenerationMatch`) is
+  safe across instances, but the always-free tier is 5,000 Class A ops a month (~160
+  writes a day) and only in a few US regions. Every write also rewrites the whole object,
+  and contended gives would retry. It's a smaller free tier for more code.
+- **SQLite on Cloud Run** (local disk, a GCS FUSE mount, or Litestream) is unsafe with more
+  than one instance. Even pinned to one instance, it adds a restore on every cold start
+  inside Slack's 3 s ack window. Not worth it.
+- **A Go key-value file** (JSON, bbolt) has the same single-writer problem on Cloud Run.
+  `local` mode is different: see "Local storage" below.
+- **Cloud SQL, AlloyDB, Spanner, Bigtable, Memorystore** all bill while idle (Spanner's free
+  instance is a 90-day trial), so they're ruled out.
+
+Verdict: keep Firestore for `gcp` mode.
+
+### Local storage: replace SQLite with a JSON file (decision, planned)
+
+Firestore is the production store, so SQLite is a second data model to keep in step with
+it. `local` mode runs as one process, so it doesn't need what SQLite is for (transactions
+shared between processes), and its SQL buys nothing the Firestore store doesn't already do
+with reads and a sort in Go. The driver also adds ~5 MB to the binary (34 MB vs 29 MB) and
+30 `modernc.org` packages.
+
+Plan: a `JSONFile` store that keeps everything in memory and mirrors the Firestore layout
+(user records with counters and the overall window, per-pair windows, a received list per
+user, one boards record). `AddActions` updates memory under a mutex, then saves by writing a
+temp file, syncing it and renaming it over the old one, so a crash never leaves a partial
+file. Rewriting the whole file per give is fine at this app's scale (~1.5 MB at 10,000
+propsies). The leaderboard sort is shared with Firestore. It must pass the existing
+contract test in `store_test.go`.
+
+Migration: none needed. The app has one user and is only used for testing, so existing
+`propsy.db` files are discarded. Handler and webhook tests move from `:memory:` SQLite to an
+in-memory `JSONFile`.
+
+Rejected: bbolt (closest to Firestore's collections, but still a dependency and more code
+than the JSON file).
+
 Layout:
 
 - `users/{id}` → counters `propsiesReceived`, `dropsiesReceived`, `propsiesGiven`,
@@ -217,5 +262,7 @@ share a rank. No composite index is needed anywhere.
    HTTP manifest at the service; verify `/propsy` and Home over HTTP. Capture the exact
    commands (or Terraform) in `deploy/` + README, and consider a release-triggered deploy
    job using Workload Identity Federation.
-4. **Later, if wanted:** time-windowed leaderboards, a message
+4. **Local store → JSON file:** replace SQLite with the `JSONFile` store described in §3
+   ("Local storage"). No data migration: the only install is a test one.
+5. **Later, if wanted:** time-windowed leaderboards, a message
    shortcut for giving a propsy, `PROPSY_REQUIRE_REASON`, `LOG_FORMAT=json` for Cloud Logging.
