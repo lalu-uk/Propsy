@@ -87,5 +87,41 @@ go test ./... && golangci-lint run
 
 See [`CONTRIBUTING.md`](./CONTRIBUTING.md) for the contribution workflow.
 
-Releases: Conventional Commits → release-please PR → GoReleaser publishes binaries and
-`ghcr.io/laluowen/propsy`.
+Releases: Conventional Commits → release-please PR → GoReleaser publishes binaries and a
+versioned image, `ghcr.io/lalu-uk/propsy:vX.Y.Z`. There is deliberately no `latest` tag (or
+floating `1` / `1.2`): pin an exact version, or better its digest.
+
+### Verifying a release
+
+Everything is signed with [cosign](https://github.com/sigstore/cosign) using Sigstore
+**keyless** signing, so there are no keys to trust or rotate: the signature proves the artifact
+was produced by this repository's release workflow. Each binary, `checksums.txt` and SBOM has
+a `<name>.sigstore.json` bundle beside it on the release.
+
+```sh
+# A binary (swap in your platform's file name):
+cosign verify-blob propsy_linux_amd64 \
+  --bundle propsy_linux_amd64.sigstore.json \
+  --certificate-identity-regexp '(?i)^https://github\.com/lalu-uk/propsy/\.github/workflows/release\.yml@' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com
+
+# The container image (best: verify, then pin the digest it resolves to):
+cosign verify ghcr.io/lalu-uk/propsy:v1.2.3 \
+  --certificate-identity-regexp '(?i)^https://github\.com/lalu-uk/propsy/\.github/workflows/release\.yml@' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com
+
+# Build provenance (which workflow run built it, from which commit):
+gh attestation verify propsy_linux_amd64 --repo lalu-uk/propsy
+gh attestation verify oci://ghcr.io/lalu-uk/propsy:v1.2.3 --repo lalu-uk/propsy
+```
+
+The identity is matched by regexp because the release workflow runs on `workflow_run`, so the
+certificate names the branch it ran on, not the tag.
+
+Releases are built to work with GitHub's immutable releases: release-please creates a draft
+release (with its tag), GoReleaser attaches every asset to it, and only then publishes it, at
+which point the assets and tag are frozen. A published version is permanent: a bad release is
+fixed by cutting a new version, not by editing the old one.
+
+To try a release build locally, skip the steps that need CI credentials:
+`goreleaser release --snapshot --clean --skip=sign,sbom` (add `docker` without buildx).

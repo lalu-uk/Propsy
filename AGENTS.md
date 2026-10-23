@@ -71,6 +71,21 @@ don't fall back to plain `git commit` (signing may need the owner to touch a har
 If a `gh` remote exists, fetch and push through it rather than `origin`. Only commit or push when
 asked, and open a PR instead of pushing to `main`.
 
+## Releases
+
+Built for GitHub **immutable releases** (enforced at the org level): release-please makes a *draft*
+release with its tag already pushed (`release-please-config.json`: `draft` + `force-tag-creation`),
+GoReleaser uploads every asset to that draft (`release.use_existing_draft`) and then publishes it
+(`draft: false`); after that the release can't change. Never add a step that modifies a release
+after the GoReleaser job, and never create the release published. If the job fails before the
+publish, re-run the failed job.
+
+Everything GoReleaser builds is signed keylessly with cosign (`signs`, `docker_signs`, plus Syft
+SBOMs and `actions/attest` provenance; see `PLAN.md` §5 and the README's "Verifying a release").
+Signing needs the CI OIDC token, so locally use `goreleaser release --snapshot --clean
+--skip=sign,sbom` (add `docker` without buildx). Don't pin a tag in the verification identity: the
+workflow runs on `workflow_run`. Container tags are exact versions only: never add `latest`.
+
 ## Env vars
 
 Local: `SLACK_BOT_TOKEN`, `SLACK_APP_TOKEN`, optional `DB_PATH` (default `./propsy.db`).
