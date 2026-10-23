@@ -226,11 +226,8 @@ func homeBlocks(stats store.Stats, b boards, recent []store.Action, q *quota) []
 
 	if len(recent) > 0 {
 		blocks = append(blocks, slack.NewDividerBlock(), section("*Recently received*"))
-		var b strings.Builder
-		for i, a := range recent {
-			if i > 0 {
-				b.WriteByte('\n')
-			}
+		for _, a := range recent {
+			var b strings.Builder
 			if a.Delta < 0 {
 				fmt.Fprintf(&b, "• :droplet: <@%s> gave you a dropsy", a.From)
 			} else {
@@ -240,8 +237,8 @@ func homeBlocks(stats store.Stats, b boards, recent []store.Action, q *quota) []
 				fmt.Fprintf(&b, ": %s", a.Reason)
 			}
 			fmt.Fprintf(&b, " _(<!date^%d^{date_short_pretty}|%s>)_", a.CreatedAt.Unix(), a.CreatedAt.Format("2006-01-02"))
+			blocks = append(blocks, section(b.String()))
 		}
-		blocks = append(blocks, section(b.String()))
 	}
 	return blocks
 }

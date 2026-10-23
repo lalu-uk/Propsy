@@ -104,7 +104,7 @@ func (s *Server) handleEvent(w http.ResponseWriter, r *http.Request) {
 // verified reads the body and checks Slack's signature headers. On failure it
 // writes the error response itself and returns ok=false.
 func (s *Server) verified(w http.ResponseWriter, r *http.Request) (body []byte, ok bool) {
-	body, err := io.ReadAll(r.Body)
+	body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, 1<<20))
 	if err != nil {
 		http.Error(w, "bad request", http.StatusBadRequest)
 		return nil, false
