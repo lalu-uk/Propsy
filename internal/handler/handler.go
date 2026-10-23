@@ -157,7 +157,10 @@ func (h *Handler) HandleSlashCommand(ctx context.Context, cmd slack.SlashCommand
 // channel the command was run in.
 func (h *Handler) announce(ctx context.Context, cmd slack.SlashCommand, to []string, reason string, delta int) error {
 	blocks := announcementBlocks(cmd.UserID, to, reason, delta)
-	text := announcementText(delta)
+	text := fmt.Sprintf("%s <@%s> gave one to %s.", announcementText(delta), cmd.UserID, mentions(to))
+	if reason != "" {
+		text += " Reason: " + reason
+	}
 
 	if ch := h.AnnounceChannel; ch != "" && ch != cmd.ChannelID {
 		_, _, err := h.Slack.PostMessage(ch, slack.MsgOptionBlocks(blocks...), slack.MsgOptionText(text, false))
