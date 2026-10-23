@@ -66,7 +66,7 @@ func testRepository(t *testing.T, r Repository, uniq string) {
 	}
 
 	// Shared databases may hold other users; just check relative order of ours.
-	board, err := r.Leaderboard(ctx, 1000)
+	board, err := r.Leaderboard(ctx, BoardReceived, 1000)
 	if err != nil {
 		t.Fatalf("Leaderboard: %v", err)
 	}
@@ -83,8 +83,8 @@ func testRepository(t *testing.T, r Repository, uniq string) {
 		t.Errorf("Leaderboard (ours) = %+v; want b:2, a:1, c:-1 (negative scores are listed)", ours)
 	}
 
-	if top, err := r.Leaderboard(ctx, 1); err != nil || len(top) != 1 {
-		t.Errorf("Leaderboard(1) = %+v, %v; want 1 entry", top, err)
+	if top, err := r.Leaderboard(ctx, BoardReceived, 1); err != nil || len(top) != 1 {
+		t.Errorf("Leaderboard(received, 1) = %+v, %v; want 1 entry", top, err)
 	}
 }
 
@@ -96,6 +96,7 @@ func TestSQLiteRepository(t *testing.T) {
 	t.Cleanup(func() { _ = s.Close() })
 	testRepository(t, s, "sqlite")
 	testLimits(t, s, "sqlite")
+	testBoards(t, s, "sqlite")
 }
 
 // The Firestore test talks to a local emulator
@@ -113,6 +114,7 @@ func TestFirestoreRepository(t *testing.T) {
 	uniq := time.Now().Format("150405.000000") + "-"
 	testRepository(t, f, uniq)
 	testLimits(t, f, uniq)
+	testBoards(t, f, uniq)
 }
 
 // testLimits is the rate-limit contract: fixed windows that open on first use,
@@ -216,5 +218,64 @@ func testLimits(t *testing.T, r Repository, uniq string) {
 	}
 	if al, _ := r.Allowance(ctx, free, day, base); al.Used != 0 {
 		t.Errorf("unlimited giver Allowance = %+v, want zero", al)
+	}
+}
+
+// testBoards: the received board covers everyone who has received a propsy or
+// dropsy (even at a negative score), the given board everyone who has given
+// one, and neither is capped except by the limit asked for.
+func testBoards(t *testing.T, r Repository, uniq string) {
+	t.Helper()
+	ctx := context.Background()
+	p, q, rr, s := uniq+"BP", uniq+"BQ", uniq+"BR", uniq+"BS"
+	base := time.Now().UTC().Truncate(time.Millisecond)
+
+	for i, a := range []Action{
+		{From: p, To: q, Delta: 1},
+		{From: p, To: q, Delta: 1},
+		{From: rr, To: q, Delta: -1}, // rr has only ever given a dropsy
+		{From: q, To: s, Delta: -1},  // s is only ever on the receiving end of a dropsy
+	} {
+		a.CreatedAt = base.Add(time.Duration(i) * time.Second)
+		if err := r.AddActions(ctx, []Action{a}, Limits{}, a.CreatedAt); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// ours returns the entries for our users as a map: ties are ordered
+	// arbitrarily by some stores, so only values and relative order of
+	// distinct counts are asserted.
+	ours := func(board Board) (map[string]int, []Entry) {
+		t.Helper()
+		all, err := r.Leaderboard(ctx, board, 1000)
+		if err != nil {
+			t.Fatalf("Leaderboard(%d): %v", board, err)
+		}
+		m := map[string]int{}
+		var order []Entry
+		for _, e := range all {
+			if e.UserID == p || e.UserID == q || e.UserID == rr || e.UserID == s {
+				m[e.UserID] = e.Count
+				order = append(order, e)
+			}
+		}
+		return m, order
+	}
+
+	got, order := ours(BoardReceived)
+	if len(got) != 2 || got[q] != 1 || got[s] != -1 || order[0].UserID != q {
+		t.Errorf("received board = %+v; want q:1 then s:-1, and not p or r (who've received nothing)", order)
+	}
+
+	got, order = ours(BoardGiven)
+	if len(got) != 3 || got[p] != 2 || got[q] != 1 || got[rr] != 1 || order[0].UserID != p {
+		t.Errorf("given board = %+v; want p:2 first, then q:1 and r:1 (dropsies given count too), and not s", order)
+	}
+
+	if top, err := r.Leaderboard(ctx, BoardGiven, 1); err != nil || len(top) != 1 {
+		t.Errorf("Leaderboard(given, 1) = %+v, %v; want 1 entry", top, err)
+	}
+	if _, err := r.Leaderboard(ctx, Board(99), 10); err == nil {
+		t.Error("an unknown board should be an error")
 	}
 }

@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strconv"
 	"strings"
 	"testing"
@@ -18,17 +19,13 @@ type posted struct {
 }
 
 type fakeSlack struct {
-	responses  []*slack.WebhookMessage
-	posts      []posted
-	postErr    error
-	published  map[string]slack.HomeTabViewRequest
-	publishErr error
+	responses []*slack.WebhookMessage
+	posts     []posted
+	postErr   error
+	published map[string]slack.HomeTabViewRequest
 }
 
 func (f *fakeSlack) PublishView(userID string, v slack.HomeTabViewRequest, _ string) (*slack.ViewResponse, error) {
-	if f.publishErr != nil {
-		return nil, f.publishErr
-	}
 	if f.published == nil {
 		f.published = map[string]slack.HomeTabViewRequest{}
 	}
@@ -145,8 +142,8 @@ func TestGivePropsies(t *testing.T) {
 	if r := fs.lastResponse(t); len(fs.responses) != 1 || r.ResponseType != slack.ResponseTypeInChannel {
 		t.Fatalf("want one in_channel response, got %+v", fs.responses)
 	}
-	if len(fs.published) != 3 {
-		t.Errorf("published homes = %d, want 3 (giver + 2 recipients)", len(fs.published))
+	if len(fs.published) != 0 {
+		t.Errorf("giving must not publish Home tabs (they're built when opened), published %d", len(fs.published))
 	}
 }
 
@@ -195,7 +192,7 @@ func TestRejections(t *testing.T) {
 			if len(fs.responses) != 1 || r.ResponseType != slack.ResponseTypeEphemeral || !strings.Contains(r.Text, tt.want) {
 				t.Errorf("responses = %+v, want ephemeral containing %q", fs.responses, tt.want)
 			}
-			if board, _ := repo.Leaderboard(context.Background(), 10); len(board) != 0 {
+			if board, _ := repo.Leaderboard(context.Background(), store.BoardReceived, 10); len(board) != 0 {
 				t.Errorf("nothing should be recorded, got %+v", board)
 			}
 		})
@@ -212,14 +209,75 @@ func TestSelfAmongOthersIsSkipped(t *testing.T) {
 	}
 }
 
-func TestHomeRefreshFailureDoesNotFailCommand(t *testing.T) {
+func TestHomeListsEveryoneOnBothBoards(t *testing.T) {
 	h, fs, _ := newTestHandler(t)
-	fs.publishErr = errors.New("boom")
-	if err := h.HandleSlashCommand(context.Background(), propsy("UME", "<@UB> hi")); err != nil {
-		t.Fatalf("err = %v, want nil", err)
+	ctx := context.Background()
+	// 15 distinct receivers: more than the old top 10.
+	for i := 0; i < 15; i++ {
+		_ = h.HandleSlashCommand(ctx, propsy("UGIVER", fmt.Sprintf("<@UREC%02d> hi", i)))
 	}
-	if len(fs.responses) != 1 {
-		t.Errorf("announcement should still be posted")
+	_ = h.HandleSlashCommand(ctx, dropsy("UMEAN", "<@UVICTIM> grr")) // dropsy-only on both sides
+	if err := h.PublishHome(ctx, "UGIVER"); err != nil {
+		t.Fatal(err)
+	}
+	out := render(t, fs.published["UGIVER"].Blocks.BlockSet)
+	for i := 0; i < 15; i++ {
+		if !strings.Contains(out, fmt.Sprintf("<@UREC%02d> — 1", i)) {
+			t.Errorf("UREC%02d missing from the received board", i)
+		}
+	}
+	for _, want := range []string{"<@UVICTIM> — -1", "<@UGIVER> — 15", "<@UMEAN> — 1"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("missing %q: %s", want, out)
+		}
+	}
+}
+
+func TestLeaderboardMax(t *testing.T) {
+	h, fs, _ := newTestHandler(t)
+	ctx := context.Background()
+	for i := 1; i <= 4; i++ { // UREC1 gets 1 propsy, UREC2 gets 2, ... so the order is UREC4, 3, 2, 1
+		for j := 0; j < i; j++ {
+			_ = h.HandleSlashCommand(ctx, propsy(fmt.Sprintf("UG%d%d", i, j), fmt.Sprintf("<@UREC%d> hi", i)))
+		}
+	}
+	home := func() string {
+		t.Helper()
+		if err := h.PublishHome(ctx, "UX"); err != nil {
+			t.Fatal(err)
+		}
+		return render(t, fs.published["UX"].Blocks.BlockSet)
+	}
+
+	h.LeaderboardMax = 2
+	out := home()
+	if !strings.Contains(out, "<@UREC4> — 4") || !strings.Contains(out, "<@UREC3> — 3") ||
+		strings.Contains(out, "<@UREC2> —") || strings.Contains(out, "<@UREC1> —") {
+		t.Errorf("max 2 should list only the top two of the received board: %s", out)
+	}
+	if strings.Count(out, "Showing the top 2.") != 2 { // received has 4 people, given has 10
+		t.Errorf("both boards were cut and should say so: %s", out)
+	}
+
+	h.LeaderboardMax = 4 // exactly as many people as the received board has: not cut
+	out = home()
+	if !strings.Contains(out, "<@UREC1> — 1") || strings.Count(out, "Showing the top 4.") != 1 {
+		t.Errorf("max 4 lists all 4 receivers without a cut note (only the 10-giver board is cut): %s", out)
+	}
+
+	for _, unlimited := range []int{0, -1} {
+		h.LeaderboardMax = unlimited
+		if out = home(); strings.Contains(out, "Showing the top") || !strings.Contains(out, "<@UREC1> — 1") {
+			t.Errorf("LeaderboardMax=%d should list everyone: %s", unlimited, out)
+		}
+	}
+}
+
+func TestBoardLimitIsClampedToTheHardMax(t *testing.T) {
+	for in, want := range map[int]int{0: boardHardMax, -5: boardHardMax, 10: 10, boardHardMax: boardHardMax, boardHardMax + 1: boardHardMax} {
+		if got := (Settings{LeaderboardMax: in}).boardLimit(); got != want {
+			t.Errorf("boardLimit(%d) = %d, want %d", in, got, want)
+		}
 	}
 }
 
@@ -286,7 +344,7 @@ func TestOverallLimitIsAllOrNothing(t *testing.T) {
 	if got := fs.lastResponse(t).Text; !strings.Contains(got, "takes 3") || !strings.Contains(got, "only have 2 propsies/dropsies left") {
 		t.Errorf("message = %q", got)
 	}
-	if board, _ := repo.Leaderboard(ctx, 10); len(board) != 0 {
+	if board, _ := repo.Leaderboard(ctx, store.BoardReceived, 10); len(board) != 0 {
 		t.Errorf("a command exceeding the allowance must record nothing, got %+v", board)
 	}
 }

@@ -1,6 +1,7 @@
 package config
 
 import (
+	"strings"
 	"testing"
 	"time"
 )
@@ -107,6 +108,38 @@ func TestLoadLimits(t *testing.T) {
 		setup(bad)
 		if _, err := Load(); err == nil {
 			t.Errorf("%v: expected error", bad)
+		}
+	}
+}
+
+func TestLoadLeaderboardMaxUsers(t *testing.T) {
+	t.Setenv("ENVIRONMENT", "")
+	t.Setenv("SLACK_BOT_TOKEN", "xoxb-1")
+	t.Setenv("SLACK_APP_TOKEN", "xapp-1")
+
+	for in, want := range map[string]int{"": 0, "0": 0, "10": 10} {
+		t.Setenv("PROPSY_LEADERBOARD_MAX_USERS", in)
+		if c, err := Load(); err != nil || c.LeaderboardMaxUsers != want {
+			t.Errorf("%q: got %+v, %v; want %d", in, c, err, want)
+		}
+	}
+	// Above the ceiling it's lowered, with a warning rather than a failure.
+	t.Setenv("PROPSY_LEADERBOARD_MAX_USERS", "5000")
+	c, err := Load()
+	if err != nil || c.LeaderboardMaxUsers != MaxLeaderboardUsers || len(c.Warnings) != 1 ||
+		!strings.Contains(c.Warnings[0], "5000") || !strings.Contains(c.Warnings[0], "1000") {
+		t.Errorf("5000: got max=%d warnings=%v, err=%v; want clamped to %d with one warning", c.LeaderboardMaxUsers, c.Warnings, err, MaxLeaderboardUsers)
+	}
+	// Exactly the ceiling is fine, and silent.
+	t.Setenv("PROPSY_LEADERBOARD_MAX_USERS", "1000")
+	if c, err = Load(); err != nil || c.LeaderboardMaxUsers != 1000 || len(c.Warnings) != 0 {
+		t.Errorf("1000: got max=%d warnings=%v, err=%v", c.LeaderboardMaxUsers, c.Warnings, err)
+	}
+
+	for _, bad := range []string{"-1", "ten"} {
+		t.Setenv("PROPSY_LEADERBOARD_MAX_USERS", bad)
+		if _, err := Load(); err == nil {
+			t.Errorf("%q: expected error", bad)
 		}
 	}
 }

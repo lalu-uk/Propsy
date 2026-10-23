@@ -44,6 +44,9 @@ func run() error {
 	if err != nil {
 		return err
 	}
+	for _, w := range cfg.Warnings {
+		logger.Println("warning:", w)
+	}
 
 	switch cfg.Environment {
 	case config.EnvGCP:
@@ -62,6 +65,7 @@ func newHandler(cfg *config.Config, c *slack.Client, repo store.Repository) *han
 		PerPersonLimit:       cfg.PerPersonLimit,
 		PerPersonLimitPeriod: cfg.PerPersonLimitPeriod,
 		AnnounceChannel:      cfg.AnnounceChannel,
+		LeaderboardMax:       cfg.LeaderboardMaxUsers,
 	}
 	return h
 }

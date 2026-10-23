@@ -5,11 +5,13 @@
 package handler
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
 	"log/slog"
 	"regexp"
+	"slices"
 	"strings"
 	"time"
 
@@ -20,7 +22,6 @@ import (
 const (
 	maxRecipients  = 10
 	maxReasonRunes = 500
-	leaderboardTop = 10
 	recentCount    = 5
 )
 
@@ -60,6 +61,18 @@ type Settings struct {
 	// public channel). The bot must be a member. If posting there fails, the
 	// announcement falls back to the invoking channel.
 	AnnounceChannel string
+
+	// LeaderboardMax caps how many people each leaderboard lists. Zero lists
+	// everyone, up to boardHardMax.
+	LeaderboardMax int
+}
+
+// boardLimit is how many rows each leaderboard may show.
+func (s Settings) boardLimit() int {
+	if s.LeaderboardMax <= 0 || s.LeaderboardMax > boardHardMax {
+		return boardHardMax
+	}
+	return s.LeaderboardMax
 }
 
 // Handler processes Propsy logic independent of transport.
@@ -134,15 +147,9 @@ func (h *Handler) HandleSlashCommand(ctx context.Context, cmd slack.SlashCommand
 		return err
 	}
 
-	err := h.announce(ctx, cmd, others, reason, delta)
-
-	// Refresh dashboards best-effort: the actions are already recorded.
-	for _, id := range append([]string{cmd.UserID}, others...) {
-		if herr := h.PublishHome(ctx, id); herr != nil {
-			slog.Warn("refresh home", "user", id, "err", herr)
-		}
-	}
-	return err
+	// Home tabs aren't refreshed here: a tab is rebuilt from the store whenever
+	// it's opened, and doing it live would put Slack calls on the 3s ack path.
+	return h.announce(ctx, cmd, others, reason, delta)
 }
 
 // announce posts the public announcement: to AnnounceChannel when configured
@@ -167,13 +174,14 @@ func (h *Handler) announce(ctx context.Context, cmd slack.SlashCommand, to []str
 	})
 }
 
-// PublishHome renders and publishes the app home dashboard for userID.
+// PublishHome renders and publishes the app home dashboard for userID. It's
+// called when they open the Home tab.
 func (h *Handler) PublishHome(ctx context.Context, userID string) error {
 	stats, err := h.Store.Stats(ctx, userID)
 	if err != nil {
 		return err
 	}
-	board, err := h.Store.Leaderboard(ctx, leaderboardTop)
+	b, err := h.loadBoards(ctx)
 	if err != nil {
 		return err
 	}
@@ -187,12 +195,39 @@ func (h *Handler) PublishHome(ctx context.Context, userID string) error {
 	}
 	view := slack.HomeTabViewRequest{
 		Type:   slack.VTHomeTab,
-		Blocks: slack.Blocks{BlockSet: homeBlocks(stats, board, recent, q)},
+		Blocks: slack.Blocks{BlockSet: homeBlocks(stats, b, recent, q)},
 	}
 	if _, err := h.Slack.PublishView(userID, view, ""); err != nil {
 		return fmt.Errorf("publish home for %s: %w", userID, err)
 	}
 	return nil
+}
+
+// loadBoards reads both leaderboards, up to boardLimit rows each, in a stable
+// order: ties are broken by user ID, since stores may not. It asks for one row
+// more than it shows so it can tell a board that was cut from one that just
+// happens to be full.
+func (h *Handler) loadBoards(ctx context.Context) (boards, error) {
+	limit := h.boardLimit()
+	var b boards
+	for _, bd := range []struct {
+		board store.Board
+		out   *[]store.Entry
+		cut   *int
+	}{{store.BoardReceived, &b.received, &b.receivedCut}, {store.BoardGiven, &b.given, &b.givenCut}} {
+		entries, err := h.Store.Leaderboard(ctx, bd.board, limit+1)
+		if err != nil {
+			return boards{}, err
+		}
+		slices.SortStableFunc(entries, func(x, y store.Entry) int {
+			return cmp.Or(cmp.Compare(y.Count, x.Count), cmp.Compare(x.UserID, y.UserID))
+		})
+		if len(entries) > limit {
+			entries, *bd.cut = entries[:limit], limit
+		}
+		*bd.out = entries
+	}
+	return b, nil
 }
 
 func (h *Handler) limits() store.Limits {
