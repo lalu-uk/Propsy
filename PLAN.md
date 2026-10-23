@@ -97,6 +97,28 @@ Firestore over Spanner/Cloud SQL: Spanner has a ~$65/mo/node floor (granular ins
 ~$0.09/hr) and Cloud SQL bills for an always-on VM; Firestore is pay-per-operation with a
 free tier (50k reads / 20k writes per day, 1 GiB), so an idle Propsy costs ≈ $0.
 
+Reviewed again in Oct 2026 against the goal of being serverless and free:
+
+- **Budget.** A give costs `1 + N` reads and `3N + 2` writes for N recipients (so 5 writes
+  for one recipient, 32 for ten), and a Home tab costs ~8 reads. The daily free tier covers
+  ~4,000 single-recipient gives or ~6,000 Home opens. Only the `(default)` database gets
+  the free quota; config warns if `FIRESTORE_DATABASE_ID` names another one.
+- **Datastore mode** has the same pricing and free tier with an older API, so there's no
+  reason to switch.
+- **One Cloud Storage object** (a JSON or SQLite blob written with `ifGenerationMatch`) is
+  safe across instances, but the always-free tier is 5,000 Class A ops a month (~160
+  writes a day) and only in a few US regions. Every write also rewrites the whole object,
+  and contended gives would retry. It's a smaller free tier for more code.
+- **SQLite on Cloud Run** (local disk, a GCS FUSE mount, or Litestream) is unsafe with more
+  than one instance. Even pinned to one instance, it adds a restore on every cold start
+  inside Slack's 3 s ack window. Not worth it.
+- **A Go key-value file** (JSON, bbolt) has the same single-writer problem on Cloud Run, and
+  for `local` mode it offers nothing over SQLite, which already gives transactions.
+- **Cloud SQL, AlloyDB, Spanner, Bigtable, Memorystore** all bill while idle (Spanner's free
+  instance is a 90-day trial), so they're ruled out.
+
+Verdict: keep Firestore for `gcp` mode and SQLite for `local` mode.
+
 Layout:
 
 - `users/{id}` → counters `propsiesReceived`, `dropsiesReceived`, `propsiesGiven`,

@@ -77,6 +77,10 @@ Use a separate Slack app from [`slack/manifest.http.yaml`](./slack/manifest.http
 `SLACK_BOT_TOKEN`, `SLACK_SIGNING_SECRET`, `GCP_PROJECT_ID`. The runtime service account
 needs `roles/datastore.user`. Deployment steps are tracked in `PLAN.md` §6.
 
+To keep it free: use the project's `(default)` Firestore database (named databases get no
+free quota), deploy with `--min-instances=0 --max-instances=2` so a flood of requests can't
+scale up a bill, and set a billing budget alert. Budgets only alert; they don't stop spend.
+
 ## Development
 
 ```sh
