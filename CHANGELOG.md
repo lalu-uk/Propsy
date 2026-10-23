@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.2](https://github.com/lalu-uk/Propsy/compare/v1.1.1...v1.1.2) (2026-10-23)
+
+
+### Bug Fixes
+
+* **release:** lowercase docker image repository path ([8f28d5c](https://github.com/lalu-uk/Propsy/commit/8f28d5ce558fdaad419a5ae82e11a21733e73ff1))
+
 ## [1.1.1](https://github.com/lalu-uk/Propsy/compare/v1.1.0...v1.1.1) (2026-10-23)
 
 
