@@ -46,7 +46,7 @@ release:
 # https://goreleaser.com/customization/package/dockers_v2/
 dockers_v2:
   - images:
-      - ghcr.io/lalu-uk/Propsy
+      - ghcr.io/lalu-uk/propsy
     tags:
       - "{{ .Tag }}"
       - "latest"
