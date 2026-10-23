@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.2.0](https://github.com/lalu-uk/Propsy/compare/v1.1.2...v1.2.0) (2026-10-23)
+
+
+### Features
+
+* **leaderboard:** list everyone on received and given boards ([b065d43](https://github.com/lalu-uk/Propsy/commit/b065d43cf07fe8cd120fbe4037517256fa102307))
+* leaderboards for everyone, immutable and signed releases ([34f6a09](https://github.com/lalu-uk/Propsy/commit/34f6a090442d826fb39a6b201f2a660b7d860a20))
+
+
+### Bug Fixes
+
+* **release:** tag images with the exact version only ([1864912](https://github.com/lalu-uk/Propsy/commit/1864912e50d27fc1665aa8b6ee1aab2fbcf88065))
+
 ## [1.1.2](https://github.com/lalu-uk/Propsy/compare/v1.1.1...v1.1.2) (2026-10-23)
 
 
