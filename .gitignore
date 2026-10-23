@@ -37,7 +37,7 @@ go.work.sum
 # .vscode/
 
 # Built binary
-propsy
+./propsy
 
 # GoReleaser local output (goreleaser release --snapshot --clean)
 dist/
