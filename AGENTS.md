@@ -54,6 +54,23 @@ Run). See `PLAN.md` for design and roadmap.
 - Webhook handling is synchronous (response = ack, 3 s limit).
 - The slash commands rely on `should_escape: true` to get `<@U…>` mentions.
 
+## Committing (agents)
+
+This assumes the owner has a git alias `agent-commit` configured (see CONTRIBUTING.md, "AI-assisted
+commits"). Commit with it, not plain `git commit`, setting the model on every commit:
+
+```sh
+AGENT_MODEL="<provider>/<model>" git agent-commit -m "type(scope): subject"
+```
+
+`AGENT_MODEL` is the model you're actually running as (provider/model ID, as in your system
+prompt's model info). The alias takes the same arguments as `git commit`, signs with a dedicated
+agent key, and adds an `Assisted-by: OpenCode <version> (<model>)` trailer. If the alias is missing,
+don't fall back to plain `git commit` (signing may need the owner to touch a hardware key); ask.
+
+If a `gh` remote exists, fetch and push through it rather than `origin`. Only commit or push when
+asked, and open a PR instead of pushing to `main`.
+
 ## Env vars
 
 Local: `SLACK_BOT_TOKEN`, `SLACK_APP_TOKEN`, optional `DB_PATH` (default `./propsy.db`).

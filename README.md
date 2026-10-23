@@ -85,5 +85,7 @@ source ./firestore.sh start     # optional: enables the Firestore tests
 go test ./... && golangci-lint run
 ```
 
+See [`CONTRIBUTING.md`](./CONTRIBUTING.md) for the contribution workflow.
+
 Releases: Conventional Commits → release-please PR → GoReleaser publishes binaries and
 `ghcr.io/laluowen/propsy`.
