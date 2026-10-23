@@ -127,7 +127,7 @@ func TestBadSignatureRejected(t *testing.T) {
 			t.Errorf("%s status = %d, want 401", path, rec.Code)
 		}
 	}
-	if board, _ := repo.Leaderboard(context.Background(), 10); len(board) != 0 {
+	if board, _ := repo.Leaderboard(context.Background(), store.BoardReceived, 10); len(board) != 0 {
 		t.Errorf("unsigned request must not record propsies")
 	}
 }

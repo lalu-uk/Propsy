@@ -215,9 +215,17 @@ func (s *SQLite) Stats(ctx context.Context, userID string) (Stats, error) {
 }
 
 // Leaderboard implements Repository.
-func (s *SQLite) Leaderboard(ctx context.Context, limit int) ([]Entry, error) {
-	rows, err := s.db.QueryContext(ctx,
-		`SELECT to_user, SUM(delta) AS n FROM props GROUP BY to_user ORDER BY n DESC, to_user LIMIT ?`, limit)
+func (s *SQLite) Leaderboard(ctx context.Context, board Board, limit int) ([]Entry, error) {
+	var query string
+	switch board {
+	case BoardReceived:
+		query = `SELECT to_user, SUM(delta) AS n FROM props GROUP BY to_user ORDER BY n DESC, to_user LIMIT ?`
+	case BoardGiven:
+		query = `SELECT from_user, COUNT(*) AS n FROM props GROUP BY from_user ORDER BY n DESC, from_user LIMIT ?`
+	default:
+		return nil, fmt.Errorf("leaderboard: unknown board %d", board)
+	}
+	rows, err := s.db.QueryContext(ctx, query, limit)
 	if err != nil {
 		return nil, fmt.Errorf("leaderboard: %w", err)
 	}
@@ -225,7 +233,7 @@ func (s *SQLite) Leaderboard(ctx context.Context, limit int) ([]Entry, error) {
 	var out []Entry
 	for rows.Next() {
 		var e Entry
-		if err := rows.Scan(&e.UserID, &e.Score); err != nil {
+		if err := rows.Scan(&e.UserID, &e.Count); err != nil {
 			return nil, fmt.Errorf("scan leaderboard: %w", err)
 		}
 		out = append(out, e)

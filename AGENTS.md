@@ -25,7 +25,7 @@ Run). See `PLAN.md` for design and roadmap.
 ## Design decisions
 
 - Pure-Go SQLite, **no CGO** (distroless static image, easy cross-compile). Don't switch drivers.
-- Firestore stores counters + a per-recipient subcollection so every query uses automatic
+- Firestore stores counters + a per-recipient subcollection + one board document so every query uses automatic
   single-field indexes. Don't add queries needing composite indexes without a provisioning story.
 - Replies go via `response_url`, not `chat.postMessage`, so the bot needn't be in the channel.
 - **Vocabulary:** "1 propsy", "5 propsies", "1 dropsy", "5 dropsies" in every user-facing string,
@@ -41,11 +41,50 @@ Run). See `PLAN.md` for design and roadmap.
   enforced atomically inside `Repository.AddActions` (which returns `*store.LimitError`), with the
   window maths in `store/limits.go` (`plan`), shared by both stores. Propsies and dropsies share
   them. They must stay user-visible, with the reset time (Home tab, `/propsy` usage).
-- The leaderboard lists everyone who has received a propsy or dropsy, including scores ≤ 0.
+- Two leaderboards, both listing *everyone* they cover (by default; `PROPSY_LEADERBOARD_MAX_USERS` sets a top-N,
+  and the hard maximum `config.MaxLeaderboardUsers` = 1000 always guards Slack's block limit:
+  config clamps larger values and returns a `Config.Warnings` entry that `main` logs): received (score = propsies − dropsies, scores ≤ 0 included) and given (propsies
+  + dropsies both count). In Firestore both boards live in one document, `boards/all`, updated
+  with atomic nested-map increments in `AddActions` (1 read per board fetch regardless of headcount;
+  the 1 MiB document limit means ~15k users, an accepted ceiling).
+- Home tabs are only built when opened (`app_home_opened`), never refreshed after a command: that
+  would put up to 11 Slack calls on the 3 s ack path.
 - `PROPSY_ANNOUNCE_CHANNEL` posts announcements with `chat:write`; any failure falls back to the
   `response_url` reply in the current channel.
 - Webhook handling is synchronous (response = ack, 3 s limit).
 - The slash commands rely on `should_escape: true` to get `<@U…>` mentions.
+
+## Committing (agents)
+
+This assumes the owner has a git alias `agent-commit` configured (see CONTRIBUTING.md, "AI-assisted
+commits"). Commit with it, not plain `git commit`, setting the model on every commit:
+
+```sh
+AGENT_MODEL="<provider>/<model>" git agent-commit -m "type(scope): subject"
+```
+
+`AGENT_MODEL` is the model you're actually running as (provider/model ID, as in your system
+prompt's model info). The alias takes the same arguments as `git commit`, signs with a dedicated
+agent key, and adds an `Assisted-by: OpenCode <version> (<model>)` trailer. If the alias is missing,
+don't fall back to plain `git commit` (signing may need the owner to touch a hardware key); ask.
+
+If a `gh` remote exists, fetch and push through it rather than `origin`. Only commit or push when
+asked, and open a PR instead of pushing to `main`.
+
+## Releases
+
+Built for GitHub **immutable releases** (enforced at the org level): release-please makes a *draft*
+release with its tag already pushed (`release-please-config.json`: `draft` + `force-tag-creation`),
+GoReleaser uploads every asset to that draft (`release.use_existing_draft`) and then publishes it
+(`draft: false`); after that the release can't change. Never add a step that modifies a release
+after the GoReleaser job, and never create the release published. If the job fails before the
+publish, re-run the failed job.
+
+Everything GoReleaser builds is signed keylessly with cosign (`signs`, `docker_signs`, plus Syft
+SBOMs and `actions/attest` provenance; see `PLAN.md` §5 and the README's "Verifying a release").
+Signing needs the CI OIDC token, so locally use `goreleaser release --snapshot --clean
+--skip=sign,sbom` (add `docker` without buildx). Don't pin a tag in the verification identity: the
+workflow runs on `workflow_run`. Container tags are exact versions only: never add `latest`.
 
 ## Env vars
 
@@ -53,4 +92,4 @@ Local: `SLACK_BOT_TOKEN`, `SLACK_APP_TOKEN`, optional `DB_PATH` (default `./prop
 GCP: `ENVIRONMENT=gcp`, `SLACK_BOT_TOKEN`, `SLACK_SIGNING_SECRET`, `GCP_PROJECT_ID`,
 optional `PORT`, `FIRESTORE_DATABASE_ID`.
 Both: optional `PROPSY_LIMIT`, `PROPSY_LIMIT_PERIOD`, `PROPSY_PER_PERSON_LIMIT`,
-`PROPSY_PER_PERSON_LIMIT_PERIOD`, `PROPSY_ANNOUNCE_CHANNEL` (see `.env.example`).
+`PROPSY_PER_PERSON_LIMIT_PERIOD`, `PROPSY_LEADERBOARD_MAX_USERS`, `PROPSY_ANNOUNCE_CHANNEL` (see `.env.example`).
