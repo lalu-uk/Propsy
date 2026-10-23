@@ -28,16 +28,28 @@ archives:
 checksum:
   name_template: "checksums.txt"
 
-# release-please (see .github/workflows/release.yml) already created the
-# GitHub Release with its own generated notes before this runs; GoReleaser's
-# job here is only to attach binaries/images to it, not to write its own
-# changelog or overwrite that body (mode: keep-existing is the default, but
-# named here for clarity).
+# GitHub immutable releases: once published, a release's assets and tag are
+# frozen, so everything has to be attached *before* publishing. release-please
+# (see .github/workflows/release.yml) therefore creates the release as a
+# DRAFT, with its tag already pushed and its generated notes. GoReleaser
+# uploads all assets (binaries and checksums) to that draft,
+# then, because `draft` is false, publishes it as the last step. Until that
+# moment nothing is sealed, so a failed run can simply be re-run.
 changelog:
   disable: true
 
 release:
+  # Attach to the draft release-please made rather than creating a release.
+  use_existing_draft: true
+  draft: false
+  # Keep release-please's notes: don't write our own over them.
   mode: keep-existing
+  # A re-run after a partial upload replaces assets instead of failing on them.
+  replace_existing_artifacts: true
+  # Fail before building if this tag is already published as an immutable
+  # release (it could never be updated), instead of after.
+  preflight:
+    fail_on_error: true
 
 # Builds a multi-arch (linux/amd64 + linux/arm64) image per the Dockerfile at
 # the repo root, which just COPYs the prebuilt static binary — GoReleaser
