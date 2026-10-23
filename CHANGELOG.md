@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.0](https://github.com/lalu-uk/Propsy/compare/v1.0.0...v1.1.0) (2026-10-23)
+
+
+### Features
+
+* add propsy entrypoint with socket and webhook modes ([31acabb](https://github.com/lalu-uk/Propsy/commit/31acabb8a6cc6e521f7edc8379a5a3826f5fa9bc))
+
 ## 1.0.0 (2026-10-22)
 
 
