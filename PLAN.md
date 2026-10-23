@@ -135,9 +135,9 @@ file. Rewriting the whole file per give is fine at this app's scale (~1.5 MB at 
 propsies). The leaderboard sort is shared with Firestore. It must pass the existing
 contract test in `store_test.go`.
 
-Migration: on startup, if `DB_PATH` points at an existing SQLite file, import it once into
-the JSON file. Keep that importer (and the SQLite driver) for one release, then remove both.
-Handler and webhook tests move from `:memory:` SQLite to an in-memory `JSONFile`.
+Migration: none needed. The app has one user and is only used for testing, so existing
+`propsy.db` files are discarded. Handler and webhook tests move from `:memory:` SQLite to an
+in-memory `JSONFile`.
 
 Rejected: bbolt (closest to Firestore's collections, but still a dependency and more code
 than the JSON file).
@@ -256,6 +256,6 @@ share a rank. No composite index is needed anywhere.
    commands (or Terraform) in `deploy/` + README, and consider a release-triggered deploy
    job using Workload Identity Federation.
 4. **Local store → JSON file:** replace SQLite with the `JSONFile` store described in §3
-   ("Local storage"), with a one-release SQLite importer.
+   ("Local storage"). No data migration: the only install is a test one.
 5. **Later, if wanted:** time-windowed leaderboards, a message
    shortcut for giving a propsy, `PROPSY_REQUIRE_REASON`, `LOG_FORMAT=json` for Cloud Logging.
