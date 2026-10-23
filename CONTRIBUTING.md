@@ -25,6 +25,8 @@ real Slack workspace, see the README (Socket Mode needs no public URL).
   `fix:`, `docs:`, `ci:`, `chore:` ...), because releases are generated from them: `fix:` makes a
   patch release, `feat:` a minor one, and `!` or a `BREAKING CHANGE:` footer a major one. `docs:`,
   `ci:` and `chore:` don't cut a release on their own.
+- Don't hand-edit the version numbers in the README's install and verification examples: release
+  PRs update them (the marked blocks, see `AGENTS.md`).
 - Releases are GitHub *immutable* releases, so a published version can never be edited. The
   pipeline is described in the README and `PLAN.md` §5.
 
