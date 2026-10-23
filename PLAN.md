@@ -112,12 +112,35 @@ Reviewed again in Oct 2026 against the goal of being serverless and free:
 - **SQLite on Cloud Run** (local disk, a GCS FUSE mount, or Litestream) is unsafe with more
   than one instance. Even pinned to one instance, it adds a restore on every cold start
   inside Slack's 3 s ack window. Not worth it.
-- **A Go key-value file** (JSON, bbolt) has the same single-writer problem on Cloud Run, and
-  for `local` mode it offers nothing over SQLite, which already gives transactions.
+- **A Go key-value file** (JSON, bbolt) has the same single-writer problem on Cloud Run.
+  `local` mode is different: see "Local storage" below.
 - **Cloud SQL, AlloyDB, Spanner, Bigtable, Memorystore** all bill while idle (Spanner's free
   instance is a 90-day trial), so they're ruled out.
 
-Verdict: keep Firestore for `gcp` mode and SQLite for `local` mode.
+Verdict: keep Firestore for `gcp` mode.
+
+### Local storage: replace SQLite with a JSON file (decision, planned)
+
+Firestore is the production store, so SQLite is a second data model to keep in step with
+it. `local` mode runs as one process, so it doesn't need what SQLite is for (transactions
+shared between processes), and its SQL buys nothing the Firestore store doesn't already do
+with reads and a sort in Go. The driver also adds ~5 MB to the binary (34 MB vs 29 MB) and
+30 `modernc.org` packages.
+
+Plan: a `JSONFile` store that keeps everything in memory and mirrors the Firestore layout
+(user records with counters and the overall window, per-pair windows, a received list per
+user, one boards record). `AddActions` updates memory under a mutex, then saves by writing a
+temp file, syncing it and renaming it over the old one, so a crash never leaves a partial
+file. Rewriting the whole file per give is fine at this app's scale (~1.5 MB at 10,000
+propsies). The leaderboard sort is shared with Firestore. It must pass the existing
+contract test in `store_test.go`.
+
+Migration: on startup, if `DB_PATH` points at an existing SQLite file, import it once into
+the JSON file. Keep that importer (and the SQLite driver) for one release, then remove both.
+Handler and webhook tests move from `:memory:` SQLite to an in-memory `JSONFile`.
+
+Rejected: bbolt (closest to Firestore's collections, but still a dependency and more code
+than the JSON file).
 
 Layout:
 
@@ -232,5 +255,7 @@ share a rank. No composite index is needed anywhere.
    HTTP manifest at the service; verify `/propsy` and Home over HTTP. Capture the exact
    commands (or Terraform) in `deploy/` + README, and consider a release-triggered deploy
    job using Workload Identity Federation.
-4. **Later, if wanted:** time-windowed leaderboards, a message
+4. **Local store → JSON file:** replace SQLite with the `JSONFile` store described in §3
+   ("Local storage"), with a one-release SQLite importer.
+5. **Later, if wanted:** time-windowed leaderboards, a message
    shortcut for giving a propsy, `PROPSY_REQUIRE_REASON`, `LOG_FORMAT=json` for Cloud Logging.
