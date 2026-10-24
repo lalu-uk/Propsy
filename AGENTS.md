@@ -96,6 +96,15 @@ Signing needs the CI OIDC token, so locally use `goreleaser release --snapshot -
 --skip=sign,sbom` (add `docker` without buildx). Don't pin a tag in the verification identity: the
 workflow runs on `workflow_run`. Container tags are exact versions only: never add `latest`.
 
+## Compatibility
+
+Treat Propsy as having real users. A breaking change (config or env var renames and removals,
+changed defaults, data format changes, removed commands) needs a `!` after the commit type or a
+`BREAKING CHANGE:` footer so release-please makes it a major release, and the docs and README
+must say what to do. Data must never be silently discarded or overwritten: migrate it, or refuse
+to start with an error that says what to do (as the JSON store does with an old SQLite file). Keep
+an old env var name working, with a warning, for at least a release when renaming one.
+
 ## Env vars
 
 Local: `SLACK_BOT_TOKEN`, `SLACK_APP_TOKEN`, optional `DB_PATH` (default `./propsy.json`).
