@@ -14,9 +14,11 @@
 # stop it. Only an emulator this script starts gets one: an emulator that was
 # already running is left alone.
 #
-# To update the emulator, take the version, size and sha256 from
-# https://github.com/firebase/firebase-tools/blob/master/src/emulator/downloadableEmulatorInfo.json
-# ("firestore") and change the three values below.
+# Renovate keeps the two values below current (see renovate.json): it reads the
+# latest published firebase-tools' downloadableEmulatorInfo.json ("firestore")
+# and opens a PR changing the version and sha256 together, which CI then tests.
+# To do it by hand, take both from that file. Keep the two lines adjacent and
+# in this form: the Renovate rule matches them as a pair.
 EMULATOR_VERSION="1.22.0"
 EMULATOR_SHA256="9b6498b7f62714d67f48f59b3818883cd682dbcd46b9f59511de81c97bb5166c"
 EMULATOR_URL="https://storage.googleapis.com/firebase-preview-drop/emulator/cloud-firestore-emulator-v${EMULATOR_VERSION}.jar"
