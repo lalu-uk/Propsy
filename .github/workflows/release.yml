@@ -119,12 +119,13 @@ jobs:
             go-release-${{ runner.os }}-${{ hashFiles('go.sum') }}-
             go-release-${{ runner.os }}-
 
-      # QEMU + a container buildx driver are what let a single amd64 runner
-      # assemble the linux/arm64 half of the image too (see .goreleaser.yaml's
-      # dockers_v2.platforms). No Go code actually runs emulated — GoReleaser
-      # cross-compiles both binaries natively first; buildx is only COPYing
-      # the right one into each per-arch image layer.
-      - uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
+      # A container buildx driver is what lets a single amd64 runner assemble
+      # the linux/arm64 half of the image too (see .goreleaser.yaml's
+      # dockers_v2.platforms). There's no QEMU: nothing runs emulated, because
+      # GoReleaser cross-compiles both binaries natively and the Dockerfile has
+      # no RUN steps, only COPY/WORKDIR/USER/CMD, which BuildKit does without
+      # executing anything in the target architecture. If a RUN is ever added
+      # to the Dockerfile, put setup-qemu-action back.
       - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
 
       - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
