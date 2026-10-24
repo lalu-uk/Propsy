@@ -202,7 +202,8 @@ share a rank. No composite index is needed anywhere.
 - `mise.toml` pins Go, golangci-lint, GoReleaser and Java. There's no gcloud: the Firestore
   emulator is a Java program, so `firestore.sh` downloads the pinned jar directly (the one
   gcloud's component and firebase-tools both ship), verifies its sha256 and runs it with `java`,
-  and CI runs the same script. That took ~24 s of `setup-gcloud` off every CI run; nothing in
+  and CI runs the same script. An emulator it starts stops itself after 3 h
+  (`FIRESTORE_EMULATOR_TTL`), since nothing supervises it. That took ~24 s of `setup-gcloud` off every CI run; nothing in
   CI talks to GCP. The cost: the pinned version and checksum in `firestore.sh` are updated by
   hand, and the jar comes from `firebase-preview-drop`, the bucket firebase-tools itself uses.
 - **Tests:** `go test ./...`. The JSON store in memory and on a temp file; Firestore against the emulator

@@ -8,7 +8,7 @@ behind it.
 
 ```sh
 mise install                    # pinned toolchain (Go, golangci-lint, GoReleaser, Java)
-source ./firestore.sh start     # optional: runs the Firestore emulator (needs Java; downloads it once)
+source ./firestore.sh start     # optional: runs the Firestore emulator (needs Java; downloads it once; stops itself after 3h)
 go test ./... && golangci-lint run
 ```
 

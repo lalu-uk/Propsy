@@ -8,6 +8,12 @@
 #   source ./firestore.sh start    # downloads on first use; exports FIRESTORE_EMULATOR_HOST
 #   source ./firestore.sh stop
 #
+# Nobody supervises the emulator once it's started, so it stops itself after a
+# while: 3 hours by default. Set FIRESTORE_EMULATOR_TTL to change that, as a
+# number with a unit (30m, 3h, 1d; a bare number is seconds), or to 0 to never
+# stop it. Only an emulator this script starts gets one: an emulator that was
+# already running is left alone.
+#
 # To update the emulator, take the version, size and sha256 from
 # https://github.com/firebase/firebase-tools/blob/master/src/emulator/downloadableEmulatorInfo.json
 # ("firestore") and change the three values below.
@@ -27,6 +33,7 @@ PID_FILE="${TMPDIR:-/tmp}/propsy-firestore-emulator.pid"
 LOG_FILE="${TMPDIR:-/tmp}/propsy-firestore-emulator.log"
 JAR_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/propsy"
 JAR="${JAR_DIR}/cloud-firestore-emulator-v${EMULATOR_VERSION}.jar"
+WATCHDOG_PID_FILE="${TMPDIR:-/tmp}/propsy-firestore-emulator-watchdog.pid"
 
 if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
 	printf 'Run this script with source so it can set FIRESTORE_EMULATOR_HOST in your shell.\n' >&2
@@ -40,6 +47,42 @@ fi
 # responding, which a bare `nc -z` port check can't tell apart from healthy.
 healthy() {
 	curl -s -o /dev/null -m 2 "http://${EMULATOR_HOST}/"
+}
+
+# ttl_seconds turns FIRESTORE_EMULATOR_TTL (default 3h) into seconds; 0 means
+# no limit. It prints nothing and fails on a value it can't read.
+ttl_seconds() {
+	local ttl="${FIRESTORE_EMULATOR_TTL:-3h}" n unit
+	n="${ttl%[smhd]}"
+	unit="${ttl#"$n"}"
+	[[ "$n" =~ ^[0-9]+$ ]] || return 1
+	case "$unit" in
+		"" | s) echo "$n" ;;
+		m) echo $((n * 60)) ;;
+		h) echo $((n * 3600)) ;;
+		d) echo $((n * 86400)) ;;
+		*) return 1 ;;
+	esac
+}
+
+# start_watchdog stops the emulator (pid $1) after $2 seconds, unless it has
+# already gone: it checks the pid still belongs to the emulator jar, so a pid
+# that was reused for something else is never killed. It's a separate bash
+# process so it outlives this shell and behaves the same under bash and zsh;
+# `stop` ends it early.
+start_watchdog() {
+	nohup bash -c '
+		pid=$1 secs=$2 jar=$3
+		trap "kill \"\$sp\" 2>/dev/null; exit 0" TERM
+		sleep "$secs" &
+		sp=$!
+		wait "$sp"
+		if kill -0 "$pid" 2>/dev/null && ps -p "$pid" -o command= 2>/dev/null | grep -qF -- "$jar"; then
+			kill "$pid"
+		fi
+	' _ "$1" "$2" "$JAR" >/dev/null 2>&1 &
+	echo $! >"$WATCHDOG_PID_FILE"
+	disown 2>/dev/null || true
 }
 
 sha256_of() {
@@ -73,6 +116,12 @@ fetch_jar() {
 }
 
 start() {
+	local ttl
+	if ! ttl="$(ttl_seconds)"; then
+		printf 'Invalid FIRESTORE_EMULATOR_TTL %q: use a number with a unit (30m, 3h, 1d), or 0 for no limit\n' "${FIRESTORE_EMULATOR_TTL}" >&2
+		return 1
+	fi
+
 	if healthy; then
 		export FIRESTORE_EMULATOR_HOST="$EMULATOR_HOST"
 		printf 'Firestore emulator already running on %s\n' "$FIRESTORE_EMULATOR_HOST"
@@ -100,9 +149,17 @@ start() {
 	export FIRESTORE_EMULATOR_HOST="$EMULATOR_HOST"
 	printf 'Started Firestore emulator on %s\n' "$FIRESTORE_EMULATOR_HOST"
 	printf 'Logs: %s\n' "$LOG_FILE"
+	if [[ "$ttl" -gt 0 ]]; then
+		start_watchdog "$(cat "$PID_FILE")" "$ttl"
+		printf 'It stops itself after %s (FIRESTORE_EMULATOR_TTL=0 to disable)\n' "${FIRESTORE_EMULATOR_TTL:-3h}"
+	fi
 }
 
 stop() {
+	if [[ -f "$WATCHDOG_PID_FILE" ]]; then
+		kill "$(cat "$WATCHDOG_PID_FILE")" >/dev/null 2>&1 || true
+		rm -f "$WATCHDOG_PID_FILE"
+	fi
 	if [[ -f "$PID_FILE" ]]; then
 		kill "$(cat "$PID_FILE")" >/dev/null 2>&1 || true
 		rm -f "$PID_FILE"
