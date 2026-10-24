@@ -10,7 +10,7 @@ import (
 
 // Environment selects which deployment mode Propsy runs in (see PLAN.md §2).
 const (
-	EnvLocal = "local" // Socket Mode + SQLite (default)
+	EnvLocal = "local" // Socket Mode + a JSON data file (default)
 	EnvGCP   = "gcp"   // HTTP webhooks + Firestore, for Cloud Run
 )
 
@@ -50,7 +50,7 @@ type Config struct {
 
 	// EnvLocal.
 	SlackAppToken string // xapp-... (Socket Mode)
-	DBPath        string // SQLite file path
+	DBPath        string // JSON data file path
 
 	// EnvGCP.
 	Port                string // Cloud Run sets this
@@ -115,7 +115,7 @@ func Load() (*Config, error) {
 		}
 	case EnvLocal:
 		c.SlackAppToken = os.Getenv("SLACK_APP_TOKEN")
-		c.DBPath = envOr("DB_PATH", "./propsy.db")
+		c.DBPath = envOr("DB_PATH", "./propsy.json")
 		if c.SlackAppToken == "" {
 			missing = append(missing, "SLACK_APP_TOKEN")
 		}

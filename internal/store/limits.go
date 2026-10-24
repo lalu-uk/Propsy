@@ -28,8 +28,8 @@ type Allowance struct {
 
 // Window is one open allowance window. The zero value means none is open.
 type Window struct {
-	Start time.Time
-	Used  int
+	Start time.Time `json:"start"`
+	Used  int       `json:"used"`
 }
 
 // live returns w, or the zero Window if it has expired as of now.

@@ -27,7 +27,8 @@ go.work.sum
 # env file
 .env
 
-# local SQLite database
+# local data (a JSON file; *.db are old SQLite databases)
+propsy.json
 *.db
 *.db-shm
 *.db-wal
