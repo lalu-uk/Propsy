@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.3.0](https://github.com/lalu-uk/Propsy/compare/v1.2.2...v1.3.0) (2026-10-24)
+
+
+### Features
+
+* **store:** keep local data in a JSON file instead of SQLite ([b10cbe6](https://github.com/lalu-uk/Propsy/commit/b10cbe63df1d1837ab2505bbb528e8bf6a150793))
+* **store:** keep local data in a JSON file instead of SQLite ([9518960](https://github.com/lalu-uk/Propsy/commit/951896077e9bf467373b5b82add248ba4936994a))
+
 ## [1.2.2](https://github.com/lalu-uk/Propsy/compare/v1.2.1...v1.2.2) (2026-10-23)
 
 
