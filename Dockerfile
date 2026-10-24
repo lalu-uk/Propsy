@@ -10,7 +10,7 @@
 # Keep this file free of RUN steps: the release builds the linux/arm64 image on an
 # amd64 runner without QEMU (see .github/workflows/release.yml), which only works
 # while nothing needs to execute inside the image.
-FROM gcr.io/distroless/static-debian13:nonroot@sha256:2293b36c7c9082bf4115aab724b4d2cddec82c8eba39bf27ac0517e159acf150
+FROM gcr.io/distroless/static-debian13:nonroot@sha256:433bb346cd0b6b8346462f879adaa4ac0fbb463a72901b46736ede4aeca3dadc
 ARG TARGETPLATFORM
 WORKDIR /app
 COPY $TARGETPLATFORM/propsy /app/propsy
