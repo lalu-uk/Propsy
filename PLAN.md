@@ -222,6 +222,15 @@ share a rank. No composite index is needed anywhere.
   `release.preflight.fail_on_error` makes GoReleaser stop early if the tag is already
   published as an immutable release. Gated on CI passing. Actions pinned by SHA; Renovate keeps
   them fresh.
+- **Release speed.** Merging a release PR to a published release took ~5 min (Oct 2026): CI
+  ~60 s, then the release job ~230 s, of which cross-compiling the six binaries was ~115 s
+  (each target recompiles grpc, protobuf and Firestore from scratch, ~11 s each locally with
+  4 cores, ~0.7 s once cached). The release job therefore saves its own Go build cache on every
+  run (`actions/cache`, unique key per commit, newest earlier one restored) rather than using
+  setup-go's, which is saved once per `go.sum` from CI's host-only build and never holds the
+  other targets. A cache unused for 7 days is evicted, which only makes that release cold. A
+  matrix build isn't worth it: GoReleaser's split/merge is Pro-only, and replicating checksums,
+  SBOMs, signing and the draft-then-publish upload by hand would save less than caching does.
 - **README versions are release-managed.** The install instructions (mise pin, binary URL,
   `ghcr.io/lalu-uk/propsy:<version>`, Cloud Run deploy, verification examples) show the current
   version. release-please's generic updater rewrites them inside the release PR
