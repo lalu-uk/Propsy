@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"os"
+	"path/filepath"
 	"testing"
 	"time"
 )
@@ -88,15 +89,22 @@ func testRepository(t *testing.T, r Repository, uniq string) {
 	}
 }
 
-func TestSQLiteRepository(t *testing.T) {
-	s, err := NewSQLite(":memory:")
-	if err != nil {
-		t.Fatalf("NewSQLite: %v", err)
+func TestJSONFileRepository(t *testing.T) {
+	for name, path := range map[string]string{
+		"memory": "",
+		"file":   filepath.Join(t.TempDir(), "propsy.json"),
+	} {
+		t.Run(name, func(t *testing.T) {
+			s, err := NewJSONFile(path)
+			if err != nil {
+				t.Fatalf("NewJSONFile: %v", err)
+			}
+			t.Cleanup(func() { _ = s.Close() })
+			testRepository(t, s, "json")
+			testLimits(t, s, "json")
+			testBoards(t, s, "json")
+		})
 	}
-	t.Cleanup(func() { _ = s.Close() })
-	testRepository(t, s, "sqlite")
-	testLimits(t, s, "sqlite")
-	testBoards(t, s, "sqlite")
 }
 
 // The Firestore test talks to a local emulator
@@ -242,9 +250,7 @@ func testBoards(t *testing.T, r Repository, uniq string) {
 		}
 	}
 
-	// ours returns the entries for our users as a map: ties are ordered
-	// arbitrarily by some stores, so only values and relative order of
-	// distinct counts are asserted.
+	// ours returns the entries for our users, plus a map of their counts.
 	ours := func(board Board) (map[string]int, []Entry) {
 		t.Helper()
 		all, err := r.Leaderboard(ctx, board, 1000)
@@ -268,8 +274,9 @@ func testBoards(t *testing.T, r Repository, uniq string) {
 	}
 
 	got, order = ours(BoardGiven)
-	if len(got) != 3 || got[p] != 2 || got[q] != 1 || got[rr] != 1 || order[0].UserID != p {
-		t.Errorf("given board = %+v; want p:2 first, then q:1 and r:1 (dropsies given count too), and not s", order)
+	if len(got) != 3 || got[p] != 2 || got[q] != 1 || got[rr] != 1 ||
+		order[0].UserID != p || order[1].UserID != q || order[2].UserID != rr {
+		t.Errorf("given board = %+v; want p:2, then q:1 and r:1 in user ID order (dropsies given count too), and not s", order)
 	}
 
 	if top, err := r.Leaderboard(ctx, BoardGiven, 1); err != nil || len(top) != 1 {

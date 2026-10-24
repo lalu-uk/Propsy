@@ -1,11 +1,9 @@
 package store
 
 import (
-	"cmp"
 	"context"
 	"errors"
 	"fmt"
-	"slices"
 	"time"
 
 	"cloud.google.com/go/firestore"
@@ -248,21 +246,15 @@ func (f *Firestore) Leaderboard(ctx context.Context, board Board, limit int) ([]
 		return nil, fmt.Errorf("leaderboard: %w", err)
 	}
 	m, _ := snap.Data()[field].(map[string]any)
-	out := make([]Entry, 0, len(m))
+	counts := make(map[string]int, len(m))
 	for id, v := range m {
 		n, ok := v.(int64)
 		if !ok {
 			return nil, fmt.Errorf("decode leaderboard: %s.%s is %T, want an integer", field, id, v)
 		}
-		out = append(out, Entry{UserID: id, Count: int(n)})
+		counts[id] = int(n)
 	}
-	slices.SortFunc(out, func(a, b Entry) int {
-		return cmp.Or(cmp.Compare(b.Count, a.Count), cmp.Compare(a.UserID, b.UserID))
-	})
-	if len(out) > limit {
-		out = out[:limit]
-	}
-	return out, nil
+	return topEntries(counts, limit), nil
 }
 
 // Recent implements Repository.

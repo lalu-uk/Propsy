@@ -20,7 +20,7 @@ real Slack workspace, see the README (Socket Mode needs no public URL).
 
 - Keep a change focused, and add or update tests with it. Anything that touches storage should be
   covered in the shared contract tests in `internal/store/store_test.go`, which run against both
-  SQLite and Firestore.
+  the local JSON file store and Firestore.
 - Use [Conventional Commits](https://www.conventionalcommits.org) for commit messages (`feat:`,
   `fix:`, `docs:`, `ci:`, `chore:` ...), because releases are generated from them: `fix:` makes a
   patch release, `feat:` a minor one, and `!` or a `BREAKING CHANGE:` footer a major one. `docs:`,

@@ -5,13 +5,11 @@
 package handler
 
 import (
-	"cmp"
 	"context"
 	"errors"
 	"fmt"
 	"log/slog"
 	"regexp"
-	"slices"
 	"strings"
 	"time"
 
@@ -206,9 +204,9 @@ func (h *Handler) PublishHome(ctx context.Context, userID string) error {
 	return nil
 }
 
-// loadBoards reads both leaderboards, up to boardLimit rows each, in a stable
-// order: ties are broken by user ID, since stores may not. It asks for one row
-// more than it shows so it can tell a board that was cut from one that just
+// loadBoards reads both leaderboards, up to boardLimit rows each (the stores
+// return them highest first, ties by user ID). It asks for one row more than it
+// shows so it can tell a board that was cut from one that just
 // happens to be full.
 func (h *Handler) loadBoards(ctx context.Context) (boards, error) {
 	limit := h.boardLimit()
@@ -222,9 +220,6 @@ func (h *Handler) loadBoards(ctx context.Context) (boards, error) {
 		if err != nil {
 			return boards{}, err
 		}
-		slices.SortStableFunc(entries, func(x, y store.Entry) int {
-			return cmp.Or(cmp.Compare(y.Count, x.Count), cmp.Compare(x.UserID, y.UserID))
-		})
 		if len(entries) > limit {
 			entries, *bd.cut = entries[:limit], limit
 		}

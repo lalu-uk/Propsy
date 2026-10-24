@@ -54,7 +54,7 @@ func (w testWriter) Write(p []byte) (int, error) {
 
 func newTestServer(t *testing.T) (*Server, *fakeSlack, store.Repository) {
 	t.Helper()
-	repo, err := store.NewSQLite(":memory:")
+	repo, err := store.NewJSONFile("")
 	if err != nil {
 		t.Fatalf("store: %v", err)
 	}
