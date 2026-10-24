@@ -18,7 +18,9 @@ Run). See `PLAN.md` for design and roadmap.
 - `go test ./...` after every non-trivial change; `golangci-lint run` too.
 - `internal/store/store_test.go` holds one contract test run against every `Repository`.
   Any new store method gets added there. Firestore runs only with `FIRESTORE_EMULATOR_HOST`
-  (`source ./firestore.sh start`) and skips otherwise — never hit live GCP.
+  (`source ./firestore.sh start`) and skips otherwise — never hit live GCP. The emulator that script
+  starts stops itself after 3 h (`FIRESTORE_EMULATOR_TTL`: `30m`, `3h`, `0` for never), so start it per
+  session rather than leaving it running.
 - Handler/webhook tests use a fake `SlackAPI` + an in-memory `JSONFile`; webhook tests sign
   requests by hand. Don't import `*slack.Client` into logic — go through `SlackAPI`.
 
