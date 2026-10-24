@@ -27,11 +27,8 @@ go.work.sum
 # env file
 .env
 
-# local data (a JSON file; *.db are old SQLite databases)
+# local data (the default DB_PATH, a JSON file)
 propsy.json
-*.db
-*.db-shm
-*.db-wal
 
 # Editor/IDE
 # .idea/
