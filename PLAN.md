@@ -206,6 +206,11 @@ share a rank. No composite index is needed anywhere.
   (`FIRESTORE_EMULATOR_TTL`), since nothing supervises it. That took ~24 s of `setup-gcloud` off every CI run; nothing in
   CI talks to GCP. The cost: the pinned version and checksum in `firestore.sh` are updated by
   hand, and the jar comes from `firebase-preview-drop`, the bucket firebase-tools itself uses.
+- **Dependency updates:** Renovate (`config:best-practices`, so actions stay pinned by SHA). The
+  org's inherited config (`lalu-uk/devops-renovate`) holds everything except GitHub Actions back
+  behind approval on the Dependency Dashboard; this repo's `renovate.json` overrides that
+  (`dependencyDashboardApproval: false`, no PR concurrency or hourly limit), so updates arrive as PRs
+  by themselves. Repo config takes precedence over inherited config.
 - **Tests:** `go test ./...`. The JSON store in memory and on a temp file; Firestore against the emulator
   (`source ./firestore.sh start`), auto-skipped when `FIRESTORE_EMULATOR_HOST` is unset;
   one shared contract test (`testRepository`) runs against both stores. Handler tests use
