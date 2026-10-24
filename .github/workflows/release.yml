@@ -96,6 +96,28 @@ jobs:
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: go.mod
+          # Off: setup-go caches once per go.sum, from whichever job got there
+          # first (CI's host-only build), so the other five cross-compiled
+          # targets would never be in it. The cache below is saved on every
+          # release instead.
+          cache: false
+
+      # Cross-compiling six targets recompiles the same large dependencies
+      # (grpc, protobuf, Firestore) once per target, ~115 s on a cold runner.
+      # Each release saves the build cache under a key unique to its commit and
+      # restores the newest earlier one, so a release after a release only
+      # recompiles what changed. GitHub drops caches unused for 7 days, which
+      # just makes that release cold. Caches saved on main aren't readable by
+      # pull request branches, so a PR can't seed this one.
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: go-release-${{ runner.os }}-${{ hashFiles('go.sum') }}-${{ github.sha }}
+          restore-keys: |
+            go-release-${{ runner.os }}-${{ hashFiles('go.sum') }}-
+            go-release-${{ runner.os }}-
 
       # QEMU + a container buildx driver are what let a single amd64 runner
       # assemble the linux/arm64 half of the image too (see .goreleaser.yaml's
