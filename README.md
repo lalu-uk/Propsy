@@ -139,7 +139,7 @@ scale up a bill, and set a billing budget alert. Budgets only alert; they don't 
 
 ```sh
 mise install                    # pinned toolchain
-source ./firestore.sh start     # optional: enables the Firestore tests
+source ./firestore.sh start     # optional: enables the Firestore tests (needs Java; ~130 MB download once)
 go test ./... && golangci-lint run
 ```
 
