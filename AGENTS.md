@@ -1,13 +1,13 @@
 # Propsy — Agent/Developer Notes
 
 Self-hosted kudos bot ("propsies", and opt-in "dropsies") for Slack. One static Go binary, two modes selected by
-`ENVIRONMENT`: `local` (Socket Mode + SQLite) and `gcp` (HTTP webhooks + Firestore, Cloud
+`ENVIRONMENT`: `local` (Socket Mode + a JSON data file) and `gcp` (HTTP webhooks + Firestore, Cloud
 Run). See `PLAN.md` for design and roadmap.
 
 ## Layout
 
 - `cmd/propsy` — entrypoint; `run()` branches into `runSocket` or `runWebhook`.
-- `internal/store` — `Repository` interface; `SQLite` (pure-Go, `modernc.org/sqlite`) and `Firestore`.
+- `internal/store` — `Repository` interface; `JSONFile` (local: in memory, saved atomically to one file) and `Firestore`.
 - `internal/handler` — transport-agnostic logic (`HandleSlashCommand`, `PublishHome`) + Block Kit (`blocks.go`).
 - `internal/socket` / `internal/webhook` — transports; adapt Slack events onto the handler.
 - `internal/config` — env loading; `./.env` (see `dotenv.go`) fills in vars that are unset in the real environment.
@@ -19,19 +19,21 @@ Run). See `PLAN.md` for design and roadmap.
 - `internal/store/store_test.go` holds one contract test run against every `Repository`.
   Any new store method gets added there. Firestore runs only with `FIRESTORE_EMULATOR_HOST`
   (`source ./firestore.sh start`) and skips otherwise — never hit live GCP.
-- Handler/webhook tests use a fake `SlackAPI` + `:memory:` SQLite; webhook tests sign
+- Handler/webhook tests use a fake `SlackAPI` + an in-memory `JSONFile`; webhook tests sign
   requests by hand. Don't import `*slack.Client` into logic — go through `SlackAPI`.
 
 ## Design decisions
 
-- Pure-Go SQLite, **no CGO** (distroless static image, easy cross-compile). Don't switch drivers.
-  SQLite itself is due to be replaced by a JSON-file store (`PLAN.md` §3, "Local storage").
+- Local mode is a JSON file (`JSONFile`), not a database: it mirrors Firestore's layout (user
+  records, per-pair windows, one boards record), shares `plan()` and `topEntries()` with the
+  Firestore store, and must pass the same contract tests. Saves are write-temp, fsync, rename; a
+  failed save leaves memory untouched. One process per file. No CGO and no database driver
+  (`PLAN.md` §3, "Local storage").
 - Firestore stores counters + a per-recipient subcollection + one board document so every query uses automatic
   single-field indexes. Don't add queries needing composite indexes without a provisioning story.
 - Replies go via `response_url`, not `chat.postMessage`, so the bot needn't be in the channel.
 - **Vocabulary:** "1 propsy", "5 propsies", "1 dropsy", "5 dropsies" in every user-facing string,
-  doc and comment (use `propsies(n)` / `dropsies(n)` in `blocks.go` for counted nouns). The SQLite
-  table is still named `props` to avoid a rename migration.
+  doc and comment (use `propsies(n)` / `dropsies(n)` in `blocks.go` for counted nouns).
 - Only `/propsy` and `/dropsy` are answered; any other command name is refused. `/dropsy` is
   `Delta: -1`; it's opt-in purely via the `*.dropsy.yaml` manifests (keep them identical to the
   base ones apart from that command: `slack/manifest_test.go` enforces it). Propsies and dropsies
@@ -96,7 +98,7 @@ workflow runs on `workflow_run`. Container tags are exact versions only: never a
 
 ## Env vars
 
-Local: `SLACK_BOT_TOKEN`, `SLACK_APP_TOKEN`, optional `DB_PATH` (default `./propsy.db`).
+Local: `SLACK_BOT_TOKEN`, `SLACK_APP_TOKEN`, optional `DB_PATH` (default `./propsy.json`).
 GCP: `ENVIRONMENT=gcp`, `SLACK_BOT_TOKEN`, `SLACK_SIGNING_SECRET`, `GCP_PROJECT_ID`,
 optional `PORT`, `FIRESTORE_DATABASE_ID`.
 Both: optional `PROPSY_LIMIT`, `PROPSY_LIMIT_PERIOD`, `PROPSY_PER_PERSON_LIMIT`,

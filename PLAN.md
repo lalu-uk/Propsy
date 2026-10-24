@@ -25,10 +25,10 @@ branches once; everything below is shared.
 
 | Mode | `ENVIRONMENT` | Transport | Storage |
 |---|---|---|---|
-| **A: Socket** | `local` (default) | Slack Socket Mode (outbound WebSocket) | SQLite file |
+| **A: Socket** | `local` (default) | Slack Socket Mode (outbound WebSocket) | JSON file |
 | **B: Webhook** | `gcp` | HTTP, signature-verified (`/slack/commands`, `/slack/events`, `/healthz`) | Firestore |
 
-Packages: `internal/config` (env), `internal/store` (`Repository` + SQLite + Firestore),
+Packages: `internal/config` (env), `internal/store` (`Repository` + JSON file + Firestore),
 `internal/handler` (transport-agnostic logic + Block Kit), `internal/socket`,
 `internal/webhook`. Handler depends on a narrow `SlackAPI` interface so it's testable with
 fakes.
@@ -119,25 +119,31 @@ Reviewed again in Oct 2026 against the goal of being serverless and free:
 
 Verdict: keep Firestore for `gcp` mode.
 
-### Local storage: replace SQLite with a JSON file (decision, planned)
+### Local storage: a JSON file (implemented; replaced SQLite)
 
-Firestore is the production store, so SQLite is a second data model to keep in step with
+Firestore is the production store, so SQLite was a second data model to keep in step with
 it. `local` mode runs as one process, so it doesn't need what SQLite is for (transactions
-shared between processes), and its SQL buys nothing the Firestore store doesn't already do
-with reads and a sort in Go. The driver also adds ~5 MB to the binary (34 MB vs 29 MB) and
-30 `modernc.org` packages.
+shared between processes), and its SQL bought nothing the Firestore store doesn't already do
+with reads and a sort in Go. The driver also added ~5 MB to the binary (34 MB vs 29 MB) and
+30 `modernc.org` packages; both are gone.
 
-Plan: a `JSONFile` store that keeps everything in memory and mirrors the Firestore layout
-(user records with counters and the overall window, per-pair windows, a received list per
-user, one boards record). `AddActions` updates memory under a mutex, then saves by writing a
-temp file, syncing it and renaming it over the old one, so a crash never leaves a partial
-file. Rewriting the whole file per give is fine at this app's scale (~1.5 MB at 10,000
-propsies). The leaderboard sort is shared with Firestore. It must pass the existing
-contract test in `store_test.go`.
+`JSONFile` (`internal/store/jsonfile.go`) keeps everything in memory and mirrors the
+Firestore layout: a record per user (counters, the overall window, per-pair windows, the
+received list) and one pair of boards. `AddActions` checks the limits with the shared
+`plan()`, builds the new state on a copy of what it touches, saves, and only then swaps it in,
+so a failed save changes nothing. Saving writes a temp file, fsyncs it and renames it over the
+old one, so a crash never leaves a partial file. Rewriting the whole file per give is fine at
+this app's scale (~1.5 MB at 10,000 propsies). Leaderboard ranking (`topEntries`) and the
+stats and window types are shared with Firestore, and the one contract test in
+`store_test.go` runs against the in-memory store, a file-backed one and Firestore.
 
-Migration: none needed. The app has one user and is only used for testing, so existing
-`propsy.db` files are discarded. Handler and webhook tests move from `:memory:` SQLite to an
-in-memory `JSONFile`.
+Limits of the design: one process per file (a second would clobber the first's writes; there
+is no lock, since the portable options are worse than the failure they'd prevent), and the
+default path is `./propsy.json` (`DB_PATH`).
+
+Migration: none. The app has one user and was only used for testing. An old SQLite file at
+`DB_PATH` is refused with an error that says so (it's recognised by its header) rather than
+silently ignored or overwritten. Handler and webhook tests use an in-memory `JSONFile`.
 
 Rejected: bbolt (closest to Firestore's collections, but still a dependency and more code
 than the JSON file).
@@ -153,7 +159,7 @@ Layout:
 - `users/{from}/pairs/{to}` → the per-person window (`windowStart`, `windowUsed`).
 
 `AddActions` is one transaction: read the windows, check them (shared pure logic in
-`store/limits.go`, so SQLite and Firestore can't disagree), then write the `received`
+`store/limits.go`, so the JSON file and Firestore can't disagree), then write the `received`
 docs, counters and windows. A limit hit returns a `*LimitError` with nothing written.
 Limits cost O(1) reads, with no per-action history to count.
 
@@ -194,7 +200,7 @@ share a rank. No composite index is needed anywhere.
 ## 5. Build, test, release (copied from ChipIn)
 
 - `mise.toml` pins Go, golangci-lint, GoReleaser, gcloud + Firestore emulator, Java.
-- **Tests:** `go test ./...`. SQLite on `:memory:`; Firestore against the emulator
+- **Tests:** `go test ./...`. The JSON store in memory and on a temp file; Firestore against the emulator
   (`source ./firestore.sh start`), auto-skipped when `FIRESTORE_EMULATOR_HOST` is unset;
   one shared contract test (`testRepository`) runs against both stores. Handler tests use
   fakes; webhook tests drive real handler over `httptest` with hand-computed Slack
@@ -262,7 +268,7 @@ share a rank. No composite index is needed anywhere.
    HTTP manifest at the service; verify `/propsy` and Home over HTTP. Capture the exact
    commands (or Terraform) in `deploy/` + README, and consider a release-triggered deploy
    job using Workload Identity Federation.
-4. **Local store → JSON file:** replace SQLite with the `JSONFile` store described in §3
-   ("Local storage"). No data migration: the only install is a test one.
+4. **Local store → JSON file (done):** replaced SQLite with the `JSONFile` store described in
+   §3 ("Local storage").
 5. **Later, if wanted:** time-windowed leaderboards, a message
    shortcut for giving a propsy, `PROPSY_REQUIRE_REASON`, `LOG_FORMAT=json` for Cloud Logging.
