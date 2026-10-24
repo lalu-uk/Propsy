@@ -3,7 +3,5 @@
   "extends": [
     "config:best-practices"
   ],
-  "dependencyDashboardApproval": false,
-  "prConcurrentLimit": 0,
-  "prHourlyLimit": 0
+  "dependencyDashboardApproval": false
 }
