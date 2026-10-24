@@ -28,7 +28,7 @@ func TestLoadLocalDefaults(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Load: %v", err)
 	}
-	if c.Environment != EnvLocal || c.DBPath != "./propsy.db" {
+	if c.Environment != EnvLocal || c.DBPath != "./propsy.json" {
 		t.Errorf("got %+v", c)
 	}
 }

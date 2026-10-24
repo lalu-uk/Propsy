@@ -8,7 +8,7 @@ Self-hosted, scale-to-zero **kudos for Slack**, as a single static Go binary.
 
 | Mode | `ENVIRONMENT` | Transport | Storage | Suited to |
 |---|---|---|---|---|
-| **Socket** | `local` (default) | Slack Socket Mode | SQLite | Local dev, a box you control |
+| **Socket** | `local` (default) | Slack Socket Mode | JSON file | Local dev, a box you control |
 | **Webhook** | `gcp` | HTTP | Firestore | Cloud Run, scale-to-zero (~$0 idle) |
 
 ## Install
