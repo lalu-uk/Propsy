@@ -2,7 +2,7 @@
 // It runs in one of two modes, selected by the ENVIRONMENT variable (see
 // PLAN.md §2 and internal/config):
 //
-//   - ENVIRONMENT=local (default): Socket Mode transport + SQLite storage.
+//   - ENVIRONMENT=local (default): Socket Mode transport + a JSON data file.
 //     Suited to a single long-running process with outbound-only networking.
 //   - ENVIRONMENT=gcp: HTTP webhook transport + Firestore storage. Suited to
 //     Cloud Run, including scale-to-zero.
@@ -70,9 +70,9 @@ func newHandler(cfg *config.Config, c *slack.Client, repo store.Repository) *han
 	return h
 }
 
-// runSocket runs Mode A: Socket Mode transport + SQLite storage.
+// runSocket runs Mode A: Socket Mode transport + a JSON data file.
 func runSocket(cfg *config.Config, logger *log.Logger) error {
-	repo, err := store.NewSQLite(cfg.DBPath)
+	repo, err := store.NewJSONFile(cfg.DBPath)
 	if err != nil {
 		return err
 	}

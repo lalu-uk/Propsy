@@ -1,31 +1,33 @@
 // Package store defines the persistence boundary for propsies and dropsies and
 // its concrete implementations. The Repository interface decouples the core
-// logic from the backing store (SQLite locally, Firestore on GCP).
+// logic from the backing store (a JSON file locally, Firestore on GCP).
 package store
 
 import (
+	"cmp"
 	"context"
 	"errors"
+	"slices"
 	"time"
 )
 
 // Action is one propsy (Delta +1) or one dropsy (Delta -1) from one person to
 // another.
 type Action struct {
-	From      string    `firestore:"from"`      // Slack user ID of the giver
-	To        string    `firestore:"to"`        // Slack user ID of the receiver
-	Reason    string    `firestore:"reason"`    // free text, may be empty
-	ChannelID string    `firestore:"channelId"` // channel the command was run in
-	Delta     int       `firestore:"delta"`     // +1 (propsy) or -1 (dropsy)
-	CreatedAt time.Time `firestore:"createdAt"`
+	From      string    `firestore:"from" json:"from"`           // Slack user ID of the giver
+	To        string    `firestore:"to" json:"to"`               // Slack user ID of the receiver
+	Reason    string    `firestore:"reason" json:"reason"`       // free text, may be empty
+	ChannelID string    `firestore:"channelId" json:"channelId"` // channel the command was run in
+	Delta     int       `firestore:"delta" json:"delta"`         // +1 (propsy) or -1 (dropsy)
+	CreatedAt time.Time `firestore:"createdAt" json:"createdAt"`
 }
 
 // Stats are a user's all-time totals.
 type Stats struct {
-	PropsiesReceived int
-	DropsiesReceived int
-	PropsiesGiven    int
-	DropsiesGiven    int
+	PropsiesReceived int `json:"propsiesReceived"`
+	DropsiesReceived int `json:"dropsiesReceived"`
+	PropsiesGiven    int `json:"propsiesGiven"`
+	DropsiesGiven    int `json:"dropsiesGiven"`
 }
 
 // Score is propsies received minus dropsies received; it may be negative.
@@ -54,6 +56,23 @@ type Entry struct {
 	Count  int
 }
 
+// topEntries returns up to limit entries of counts, highest first, ties broken
+// by user ID so the order is stable. Both stores keep their boards as a map of
+// user ID to count and rank them with this.
+func topEntries(counts map[string]int, limit int) []Entry {
+	out := make([]Entry, 0, len(counts))
+	for id, n := range counts {
+		out = append(out, Entry{UserID: id, Count: n})
+	}
+	slices.SortFunc(out, func(a, b Entry) int {
+		return cmp.Or(cmp.Compare(b.Count, a.Count), cmp.Compare(a.UserID, b.UserID))
+	})
+	if len(out) > limit {
+		out = out[:limit]
+	}
+	return out
+}
+
 // Repository persists propsies and dropsies and serves the aggregates the app
 // home and rate limits need.
 type Repository interface {
@@ -67,8 +86,9 @@ type Repository interface {
 	Allowance(ctx context.Context, userID string, period time.Duration, now time.Time) (Allowance, error)
 	// Stats returns zero totals for an unknown user.
 	Stats(ctx context.Context, userID string) (Stats, error)
-	// Leaderboard returns up to limit entries of board, highest first. Everyone
-	// the board covers is eligible: there's no cut-off but limit.
+	// Leaderboard returns up to limit entries of board, highest first and with
+	// ties broken by user ID. Everyone the board covers is eligible: there's no
+	// cut-off but limit.
 	Leaderboard(ctx context.Context, board Board, limit int) ([]Entry, error)
 	// Recent returns up to limit propsies and dropsies received by userID,
 	// newest first.
@@ -77,6 +97,6 @@ type Repository interface {
 }
 
 var (
-	_ Repository = (*SQLite)(nil)
+	_ Repository = (*JSONFile)(nil)
 	_ Repository = (*Firestore)(nil)
 )

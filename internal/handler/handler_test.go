@@ -57,7 +57,7 @@ func (f *fakeSlack) lastResponse(t *testing.T) *slack.WebhookMessage {
 
 func newTestHandler(t *testing.T) (*Handler, *fakeSlack, store.Repository) {
 	t.Helper()
-	repo, err := store.NewSQLite(":memory:")
+	repo, err := store.NewJSONFile("")
 	if err != nil {
 		t.Fatalf("store: %v", err)
 	}
