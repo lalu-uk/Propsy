@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.3.1](https://github.com/lalu-uk/Propsy/compare/v1.3.0...v1.3.1) (2026-10-25)
+
+
+### Bug Fixes
+
+* **deps:** update module cloud.google.com/go/firestore to v1.29.0 ([8356114](https://github.com/lalu-uk/Propsy/commit/83561144e0a9db7d6e4d785dfdec9b14eb6bfcc3))
+* **deps:** update module cloud.google.com/go/firestore to v1.29.0 ([4142a5f](https://github.com/lalu-uk/Propsy/commit/4142a5fa588af107bf072574c7fe6207a7306414))
+
 ## [1.3.0](https://github.com/lalu-uk/Propsy/compare/v1.2.2...v1.3.0) (2026-10-24)
 
 
