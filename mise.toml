@@ -1,6 +1,6 @@
 [tools]
 [tools."aqua:goreleaser/goreleaser"]
-version = "2.18.3"
+version = "2.19.0"
 [tools."core:go"]
 version = "1.27.3"
 [tools."core:java"]
