@@ -135,7 +135,7 @@ To keep it free: use the project's `(default)` Firestore database (named databas
 free quota), deploy with `--min-instances=0 --max-instances=2` so a flood of requests can't
 scale up a bill, and set a billing budget alert. Budgets only alert; they don't stop spend.
 
-## Development
+## Contributing
 
 ```sh
 mise install                    # pinned toolchain
@@ -144,6 +144,8 @@ go test ./... && golangci-lint run
 ```
 
 See [`CONTRIBUTING.md`](./CONTRIBUTING.md) for the contribution workflow.
+
+## Releases
 
 Releases: Conventional Commits → release-please PR → GoReleaser publishes binaries and a
 versioned image, `ghcr.io/lalu-uk/propsy:vX.Y.Z`. There is deliberately no `latest` tag (or
