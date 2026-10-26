@@ -253,11 +253,14 @@ share a rank. No composite index is needed anywhere.
   signed with cosign using Sigstore keyless signing: the release job's GitHub OIDC token is
   exchanged for a short-lived certificate naming this repo's `release.yml`, and the signature
   is logged in the public Rekor transparency log.
-  - Binaries, `checksums.txt` and SBOMs: `signs` (`artifacts: all`), one `.sigstore.json`
-    bundle each, attached to the release.
-  - The container image: `docker_signs`, signing the manifest by digest.
-  - SBOMs: Syft, one per binary (`sboms`); buildx also attaches an SBOM and provenance
-    attestation to the image by default.
+  - Release assets are one archive per OS/arch (`tar.gz`; `zip` on Windows) holding the binary,
+    its SBOM (Syft, run from a build hook so it lands before archiving) and `LICENSE.md`, plus
+    `checksums.txt`. Eight assets in all with the sigstore bundle.
+  - `checksums.txt` is the only file signed (`signs`, `artifacts: checksum`), writing
+    `checksums.txt.sigstore.json`. It lists every archive's sha256, so it covers the SBOMs too. This
+    keeps it portable: any cosign and any OIDC issuer can verify it, not only GitHub's attestation store.
+  - The container image: `docker_signs`, signing the manifest by digest; buildx also attaches an
+    SBOM and provenance attestation to the image by default.
   - Build provenance: `actions/attest` over `checksums.txt` and `digests.txt`, verifiable with
     `gh attestation verify`. It complements the signature: a signature says who published an
     artifact, provenance says which workflow run built it from which commit.
@@ -268,7 +271,7 @@ share a rank. No composite index is needed anywhere.
     the tag. Verifiers should match the repo + workflow path with a regexp and not pin a ref
     (see README).
   - Signing needs a GitHub OIDC token, so it only works in CI; local snapshot builds use
-    `--skip=sign,sbom` (and `docker` if you have no buildx).
+    `--skip=sign` (and `docker` if you have no buildx; syft must be on PATH for the SBOM hook).
   - Signing happens inside the GoReleaser run, before the draft is published, so the signature
     bundles are part of the sealed release. The provenance attestations are made afterwards;
     they live in GitHub's attestation store, not as release assets, so immutability doesn't
@@ -279,8 +282,8 @@ share a rank. No composite index is needed anywhere.
 1. **MVP, socket mode (done):** store, handler, home tab, socket + webhook transports,
    CI/release scaffolding, manifests. Verify live with a real Slack app locally.
 2. **Release pipeline:** push to a GitHub repo, confirm CI green, merge the first release PR,
-   and check the draft is created with its tag, gets all assets (binaries, checksums, SBOMs,
-   `.sigstore.json` bundles), is published and shows as immutable, and the signed image lands
+   and check the draft is created with its tag, gets all assets (archives, checksums,
+   `checksums.txt.sigstore.json`), is published and shows as immutable, and the signed image lands
    in ghcr. (Each published version is permanent, so expect to burn one or two while shaking
    this out.)
 3. **Cloud Run end-to-end:** create GCP project + Firestore (native mode), Secret Manager,

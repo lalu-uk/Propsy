@@ -37,11 +37,17 @@ it straight away.
 
 ### Binary
 
+Each release has one archive per platform: `propsy_{linux,darwin}_{amd64,arm64}.tar.gz` and
+`propsy_windows_{amd64,arm64}.zip`. Each holds the `propsy` binary, its SBOM
+(`propsy_<os>_<arch>.sbom.json`, SPDX) and `LICENSE.md`.
+
 <!-- x-release-please-start-version -->
 ```sh
-# linux/amd64 shown; the other files are propsy_{linux,darwin,windows}_{amd64,arm64}[.exe]
-curl -fsSLO https://github.com/lalu-uk/Propsy/releases/download/v1.3.2/propsy_linux_amd64
-chmod +x propsy_linux_amd64
+# linux/amd64 shown
+curl -fsSLO https://github.com/lalu-uk/Propsy/releases/download/v1.3.2/propsy_linux_amd64.tar.gz
+curl -fsSLO https://github.com/lalu-uk/Propsy/releases/download/v1.3.2/checksums.txt
+sha256sum --ignore-missing -c checksums.txt   # macOS: shasum -a 256 -c, same file
+tar -xzf propsy_linux_amd64.tar.gz
 ```
 <!-- x-release-please-end -->
 
@@ -147,22 +153,23 @@ See [`CONTRIBUTING.md`](./CONTRIBUTING.md) for the contribution workflow.
 
 ## Releases
 
-Releases: Conventional Commits → release-please PR → GoReleaser publishes binaries and a
+Releases: Conventional Commits → release-please PR → GoReleaser publishes archives and a
 versioned image, `ghcr.io/lalu-uk/propsy:vX.Y.Z`. There is deliberately no `latest` tag (or
 floating `1` / `1.2`): pin an exact version, or better its digest.
 
 ### Verifying a release
 
-Everything is signed with [cosign](https://github.com/sigstore/cosign) using Sigstore
-**keyless** signing, so there are no keys to trust or rotate: the signature proves the artifact
-was produced by this repository's release workflow. Each binary, `checksums.txt` and SBOM has
-a `<name>.sigstore.json` bundle beside it on the release.
+`checksums.txt` is signed with [cosign](https://github.com/sigstore/cosign) using Sigstore
+**keyless** signing, so there are no keys to trust or rotate: the signature proves the file was
+produced by this repository's release workflow. It lists the sha256 of every archive, and each
+archive holds its SBOM, so verifying it covers the whole release. The bundle is
+`checksums.txt.sigstore.json` on the release.
 
 <!-- x-release-please-start-version -->
 ```sh
-# A binary (swap in your platform's file name):
-cosign verify-blob propsy_linux_amd64 \
-  --bundle propsy_linux_amd64.sigstore.json \
+# checksums.txt, then the archive against it:
+cosign verify-blob checksums.txt \
+  --bundle checksums.txt.sigstore.json \
   --certificate-identity-regexp '(?i)^https://github\.com/lalu-uk/propsy/\.github/workflows/release\.yml@' \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com
 
@@ -172,7 +179,7 @@ cosign verify ghcr.io/lalu-uk/propsy:v1.3.2 \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com
 
 # Build provenance (which workflow run built it, from which commit):
-gh attestation verify propsy_linux_amd64 --repo lalu-uk/propsy
+gh attestation verify propsy_linux_amd64.tar.gz --repo lalu-uk/propsy
 gh attestation verify oci://ghcr.io/lalu-uk/propsy:v1.3.2 --repo lalu-uk/propsy
 ```
 <!-- x-release-please-end -->
@@ -186,4 +193,4 @@ which point the assets and tag are frozen. A published version is permanent: a b
 fixed by cutting a new version, not by editing the old one.
 
 To try a release build locally, skip the steps that need CI credentials:
-`goreleaser release --snapshot --clean --skip=sign,sbom` (add `docker` without buildx).
+`goreleaser release --snapshot --clean --skip=sign` (add `docker` without buildx; syft must be on PATH).
