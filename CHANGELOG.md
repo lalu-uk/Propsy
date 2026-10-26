@@ -1,5 +1,18 @@
 # Changelog
 
+## [2.0.0](https://github.com/lalu-uk/Propsy/compare/v1.3.2...v2.0.0) (2026-10-26)
+
+
+### ⚠ BREAKING CHANGES
+
+* **release:** ship archives per platform, sign only checksums.txt
+
+### Features
+
+* **readme:** add logo and credit Flaticon attribution ([ce4db3e](https://github.com/lalu-uk/Propsy/commit/ce4db3e592521f60c2eb1292418de8b7febfd3b9))
+* **readme:** add logo and credit Flaticon attribution ([733680d](https://github.com/lalu-uk/Propsy/commit/733680dd8a6c8b2aee97dc8a289276cb8e3b0e86))
+* **release:** ship archives per platform, sign only checksums.txt ([ebc90fc](https://github.com/lalu-uk/Propsy/commit/ebc90fc62a15addd904983c6a432d8f5684654df))
+
 ## [1.3.2](https://github.com/lalu-uk/Propsy/compare/v1.3.1...v1.3.2) (2026-10-26)
 
 
