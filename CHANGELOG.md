@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.3.2](https://github.com/lalu-uk/Propsy/compare/v1.3.1...v1.3.2) (2026-10-26)
+
+
+### Bug Fixes
+
+* **deps:** update module google.golang.org/api to v0.308.0 ([148335b](https://github.com/lalu-uk/Propsy/commit/148335b122371c893aab6635ddd9852a167f8717))
+* **deps:** update module google.golang.org/api to v0.308.0 ([500645d](https://github.com/lalu-uk/Propsy/commit/500645dcc844f979343a1dd93d4ff8c9c5b3e0d8))
+
 ## [1.3.1](https://github.com/lalu-uk/Propsy/compare/v1.3.0...v1.3.1) (2026-10-25)
 
 
