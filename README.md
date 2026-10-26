@@ -50,7 +50,7 @@ Each release has one archive per platform: `propsy_{linux,darwin}_{amd64,arm64}.
 # linux/amd64 shown
 curl -fsSLO https://github.com/lalu-uk/Propsy/releases/download/v2.0.0/propsy_linux_amd64.tar.gz
 curl -fsSLO https://github.com/lalu-uk/Propsy/releases/download/v2.0.0/checksums.txt
-sha256sum --ignore-missing -c checksums.txt   # macOS: shasum -a 256 -c, same file
+grep ' propsy_linux_amd64.tar.gz$' checksums.txt | sha256sum -c -   # macOS: shasum -a 256 -c -
 tar -xzf propsy_linux_amd64.tar.gz
 ```
 <!-- x-release-please-end -->
@@ -176,6 +176,8 @@ cosign verify-blob checksums.txt \
   --bundle checksums.txt.sigstore.json \
   --certificate-identity-regexp '(?i)^https://github\.com/lalu-uk/propsy/\.github/workflows/release\.yml@' \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com
+# then check the archive against the now-authenticated checksums:
+grep ' propsy_linux_amd64.tar.gz$' checksums.txt | sha256sum -c -
 
 # The container image (best: verify, then pin the digest it resolves to):
 cosign verify ghcr.io/lalu-uk/propsy:v2.0.0 \
