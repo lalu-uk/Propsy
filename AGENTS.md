@@ -92,11 +92,13 @@ lists README.md under `extra-files`, and the lines to bump sit between
 `x-release-please-version`). Don't edit those versions by hand, and keep other version-like numbers
 (Go versions and so on) out of the marked blocks: every semver-looking string in them is replaced.
 
-Everything GoReleaser builds is signed keylessly with cosign (`signs`, `docker_signs`, plus Syft
-SBOMs and `actions/attest` provenance; see `PLAN.md` §5 and the README's "Verifying a release").
-Signing needs the CI OIDC token, so locally use `goreleaser release --snapshot --clean
---skip=sign,sbom` (add `docker` without buildx). Don't pin a tag in the verification identity: the
-workflow runs on `workflow_run`. Container tags are exact versions only: never add `latest`.
+Releases are one archive per OS/arch (`tar.gz`, `zip` on Windows), each holding the binary, its
+Syft SBOM (made in a build hook) and `LICENSE.md`. Only `checksums.txt` is signed with cosign
+(`signs`), plus the image (`docker_signs`), and `actions/attest` gives provenance; see `PLAN.md` §5
+and the README's "Verifying a release". Signing needs the CI OIDC token, so locally use
+`goreleaser release --snapshot --clean --skip=sign` (add `docker` without buildx; syft must be on PATH).
+Don't pin a tag in the verification identity: the workflow runs on `workflow_run`. Container tags are
+exact versions only: never add `latest`.
 
 ## Compatibility
 
