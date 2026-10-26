@@ -17,7 +17,7 @@ Self-hosted, scale-to-zero **kudos for Slack**, as a single static Go binary.
 
 ## Install
 
-Latest release: **v1.3.2** <!-- x-release-please-version -->
+Latest release: **v2.0.0** <!-- x-release-please-version -->
 
 See the [releases page](https://github.com/lalu-uk/Propsy/releases) for notes.
 
@@ -31,7 +31,7 @@ See the [releases page](https://github.com/lalu-uk/Propsy/releases) for notes.
 <!-- x-release-please-start-version -->
 ```sh
 mise use -g github:lalu-uk/Propsy@latest   # the newest release
-mise use -g github:lalu-uk/Propsy@1.3.2    # or pin this exact version
+mise use -g github:lalu-uk/Propsy@2.0.0    # or pin this exact version
 ```
 <!-- x-release-please-end -->
 
@@ -48,8 +48,8 @@ Each release has one archive per platform: `propsy_{linux,darwin}_{amd64,arm64}.
 <!-- x-release-please-start-version -->
 ```sh
 # linux/amd64 shown
-curl -fsSLO https://github.com/lalu-uk/Propsy/releases/download/v1.3.2/propsy_linux_amd64.tar.gz
-curl -fsSLO https://github.com/lalu-uk/Propsy/releases/download/v1.3.2/checksums.txt
+curl -fsSLO https://github.com/lalu-uk/Propsy/releases/download/v2.0.0/propsy_linux_amd64.tar.gz
+curl -fsSLO https://github.com/lalu-uk/Propsy/releases/download/v2.0.0/checksums.txt
 sha256sum --ignore-missing -c checksums.txt   # macOS: shasum -a 256 -c, same file
 tar -xzf propsy_linux_amd64.tar.gz
 ```
@@ -59,7 +59,7 @@ tar -xzf propsy_linux_amd64.tar.gz
 
 <!-- x-release-please-start-version -->
 ```sh
-docker pull ghcr.io/lalu-uk/propsy:v1.3.2
+docker pull ghcr.io/lalu-uk/propsy:v2.0.0
 ```
 <!-- x-release-please-end -->
 
@@ -135,7 +135,7 @@ version: there's no `latest`):
 
 <!-- x-release-please-start-version -->
 ```sh
-gcloud run deploy propsy --image=ghcr.io/lalu-uk/propsy:v1.3.2 --region=<region> ...
+gcloud run deploy propsy --image=ghcr.io/lalu-uk/propsy:v2.0.0 --region=<region> ...
 ```
 <!-- x-release-please-end -->
 
@@ -178,13 +178,13 @@ cosign verify-blob checksums.txt \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com
 
 # The container image (best: verify, then pin the digest it resolves to):
-cosign verify ghcr.io/lalu-uk/propsy:v1.3.2 \
+cosign verify ghcr.io/lalu-uk/propsy:v2.0.0 \
   --certificate-identity-regexp '(?i)^https://github\.com/lalu-uk/propsy/\.github/workflows/release\.yml@' \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com
 
 # Build provenance (which workflow run built it, from which commit):
 gh attestation verify propsy_linux_amd64.tar.gz --repo lalu-uk/propsy
-gh attestation verify oci://ghcr.io/lalu-uk/propsy:v1.3.2 --repo lalu-uk/propsy
+gh attestation verify oci://ghcr.io/lalu-uk/propsy:v2.0.0 --repo lalu-uk/propsy
 ```
 <!-- x-release-please-end -->
 
