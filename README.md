@@ -1,5 +1,9 @@
 # Propsy
 
+<p align="center">
+  <img src="./propsy.png" alt="Propsy logo" width="256" />
+</p>
+
 Self-hosted, scale-to-zero **kudos for Slack**, as a single static Go binary.
 
 - `/propsy @alice @bob for unblocking the release` gives each of them a propsy and announces it.
@@ -194,3 +198,7 @@ fixed by cutting a new version, not by editing the old one.
 
 To try a release build locally, skip the steps that need CI credentials:
 `goreleaser release --snapshot --clean --skip=sign` (add `docker` without buildx; syft must be on PATH).
+
+## Credits
+
+Logo: <a href="https://www.flaticon.com/free-icons/propeller" title="propeller icons">Propeller icons created by Magnific - Flaticon</a>
