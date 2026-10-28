@@ -93,6 +93,9 @@ func (r *Runner) dispatch(evt socketmode.Event, events chan<- socketmode.Event) 
 		}
 		enqueueEvent(events, evt, func() { r.ack(evt) }, r.log)
 
+	case socketmode.EventTypeInteractive:
+		enqueueEvent(events, evt, func() { r.ack(evt) }, r.log)
+
 	case socketmode.EventTypeEventsAPI:
 		ev, ok := evt.Data.(slackevents.EventsAPIEvent)
 		if !ok {
@@ -129,6 +132,15 @@ func (r *Runner) process(ctx context.Context, evt socketmode.Event) {
 		}
 		if err := r.handler.HandleSlashCommand(ctx, cmd); err != nil {
 			r.log.Printf("slash command error: %v", err)
+		}
+
+	case socketmode.EventTypeInteractive:
+		cb, ok := evt.Data.(slack.InteractionCallback)
+		if !ok || cb.Type != slack.InteractionTypeViewSubmission {
+			return
+		}
+		if err := r.handler.HandleViewSubmission(ctx, cb); err != nil {
+			r.log.Printf("view submission error: %v", err)
 		}
 
 	case socketmode.EventTypeEventsAPI:
