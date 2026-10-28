@@ -7,6 +7,7 @@
 Self-hosted, scale-to-zero **kudos for Slack**, as a single static Go binary.
 
 - `/propsy @alice @bob for unblocking the release` gives each of them a propsy and announces it.
+- `/propsy` on its own opens a form to pick people and a reason.
 - The app's **Home** tab shows your propsy and dropsy totals, how many you have left to give, two
   leaderboards (received, and given), and what you've recently received.
 
@@ -85,7 +86,7 @@ arguments.
 
 ## /dropsy (optional)
 
-`/dropsy @someone for being a menace` gives a dropsy, which takes a propsy away. It counts
+`/dropsy @someone for that thing you did` gives a dropsy, which takes a propsy away. It counts
 against the giver's limits like a propsy does, and the Home tab shows both totals
 (`Received: 5 propsies, 10 dropsies`). A person's score on the received board is propsies minus
 dropsies, and negative scores are listed too (at the bottom). It's opt-in because it isn't a
