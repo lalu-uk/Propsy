@@ -26,7 +26,7 @@ branches once; everything below is shared.
 | Mode | `ENVIRONMENT` | Transport | Storage |
 |---|---|---|---|
 | **A: Socket** | `local` (default) | Slack Socket Mode (outbound WebSocket) | JSON file |
-| **B: Webhook** | `gcp` | HTTP, signature-verified (`/slack/commands`, `/slack/events`, `/healthz`) | Firestore |
+| **B: Webhook** | `gcp` | HTTP, signature-verified (`/slack/commands`, `/slack/events`, `/slack/interactions`, `/healthz`) | Firestore |
 
 Packages: `internal/config` (env), `internal/store` (`Repository` + JSON file + Firestore),
 `internal/handler` (transport-agnostic logic + Block Kit), `internal/socket`,
@@ -40,6 +40,11 @@ Single-workspace by design (bot token from env) — self-hosted per workspace.
 - Slash commands `/propsy` and `/dropsy` (and nothing else: any other name is refused),
   with **"Escape channels, users, and links"** on, so mentions
   arrive as `<@U123|name>` and can be parsed reliably.
+- A slash command with no recipients opens a give form (`views.open`, from the command's
+  `trigger_id`, which lasts about 3 s). The form's `private_metadata` carries the command and the
+  `response_url`, so the submission (`view_submission` via interactivity: `/slack/interactions`
+  over HTTP, or the socket) replies the same way a command does. Interactivity is on in both
+  manifests; the HTTP one needs its `request_url` set to the service.
 - Event `app_home_opened` → `views.publish` for the opener. Home tabs are built only when
   opened, never pushed after a command: a live refresh of the giver and every recipient meant
   up to 11 sequential `views.publish` calls on the 3 s ack path, and a tab is rebuilt on
