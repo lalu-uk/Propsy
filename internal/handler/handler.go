@@ -28,6 +28,9 @@ const (
 type SlackAPI interface {
 	PublishView(userID string, view slack.HomeTabViewRequest, hash string) (*slack.ViewResponse, error)
 	PostMessage(channelID string, options ...slack.MsgOption) (string, string, error)
+	// OpenView opens a modal from a slash command's trigger_id, which Slack
+	// only accepts for about 3 seconds.
+	OpenView(triggerID string, view slack.ModalViewRequest) (*slack.ViewResponse, error)
 	// Respond posts to a slash command's response_url, which works in any
 	// channel whether or not the bot has been invited to it.
 	Respond(ctx context.Context, responseURL string, msg *slack.WebhookMessage) error
@@ -100,21 +103,39 @@ const (
 )
 
 // HandleSlashCommand dispatches `/propsy @user [@user …] [reason]` (give a
-// propsy) and `/dropsy @user [@user …] [reason]` (give a dropsy). Any other
-// command name is refused.
+// propsy) and `/dropsy @user [@user …] [reason]` (give a dropsy). With no
+// recipients it opens the give form instead. Any other command name is refused.
 func (h *Handler) HandleSlashCommand(ctx context.Context, cmd slack.SlashCommand) error {
-	var delta int
-	var usage string
-	switch cmd.Command {
-	case commandPropsy:
-		delta, usage = 1, usagePropsy
-	case commandDropsy:
-		delta, usage = -1, usageDropsy
-	default:
+	delta, usage, ok := commandDelta(cmd.Command)
+	if !ok {
 		return h.ephemeral(ctx, cmd, fmt.Sprintf("Sorry, I only answer to `%s` and `%s`, not `%s`.", commandPropsy, commandDropsy, cmd.Command))
 	}
 
 	recipients, reason := parseCommand(cmd.Text)
+	if len(recipients) == 0 {
+		if err := h.openForm(ctx, cmd, delta); err != nil {
+			slog.Warn("open give form; showing usage instead", "err", err)
+			return h.ephemeral(ctx, cmd, h.withQuota(ctx, cmd.UserID, usage))
+		}
+		return nil
+	}
+	return h.give(ctx, cmd, delta, recipients, reason)
+}
+
+// commandDelta maps a command name to its delta and usage line.
+func commandDelta(command string) (delta int, usage string, ok bool) {
+	switch command {
+	case commandPropsy:
+		return 1, usagePropsy, true
+	case commandDropsy:
+		return -1, usageDropsy, true
+	}
+	return 0, "", false
+}
+
+// give records a propsy (delta 1) or dropsy (delta -1) from cmd.UserID to each
+// recipient and announces it. Shared by the slash command and the form.
+func (h *Handler) give(ctx context.Context, cmd slack.SlashCommand, delta int, recipients []string, reason string) error {
 	var others []string
 	for _, r := range recipients {
 		if r != cmd.UserID {
@@ -123,8 +144,6 @@ func (h *Handler) HandleSlashCommand(ctx context.Context, cmd slack.SlashCommand
 	}
 
 	switch {
-	case len(recipients) == 0:
-		return h.ephemeral(ctx, cmd, h.withQuota(ctx, cmd.UserID, usage))
 	case len(others) == 0:
 		return h.ephemeral(ctx, cmd, "Nice try, but you can't do that to yourself. :wink:")
 	case len(others) > maxRecipients:

@@ -23,6 +23,21 @@ type fakeSlack struct {
 	posts     []posted
 	postErr   error
 	published map[string]slack.HomeTabViewRequest
+	opened    []openedView
+	openErr   error
+}
+
+type openedView struct {
+	triggerID string
+	view      slack.ModalViewRequest
+}
+
+func (f *fakeSlack) OpenView(triggerID string, v slack.ModalViewRequest) (*slack.ViewResponse, error) {
+	if f.openErr != nil {
+		return nil, f.openErr
+	}
+	f.opened = append(f.opened, openedView{triggerID: triggerID, view: v})
+	return &slack.ViewResponse{}, nil
 }
 
 func (f *fakeSlack) PublishView(userID string, v slack.HomeTabViewRequest, _ string) (*slack.ViewResponse, error) {
@@ -74,7 +89,7 @@ const (
 )
 
 func propsy(user, text string) slack.SlashCommand {
-	return slack.SlashCommand{Command: "/propsy", UserID: user, ChannelID: "C1", Text: text, ResponseURL: "http://resp"}
+	return slack.SlashCommand{Command: commandPropsy, UserID: user, ChannelID: "C1", Text: text, ResponseURL: testResponseURL}
 }
 
 func dropsy(user, text string) slack.SlashCommand {
@@ -175,9 +190,6 @@ func TestRejections(t *testing.T) {
 		cmd  slack.SlashCommand
 		want string
 	}{
-		{"propsy usage", propsy("UME", ""), usageNeedle},
-		{"propsy no mention", propsy("UME", "alice"), usageNeedle},
-		{"dropsy usage", dropsy("UME", ""), "/dropsy @someone"},
 		{"self only", propsy("UME", "<@UME> me"), "yourself"},
 		{"dropsy self only", dropsy("UME", "<@UME> me"), "yourself"},
 		{"too many", propsy("UME", "<@U1><@U2><@U3><@U4><@U5><@U6><@U7><@U8><@U9><@UA><@UB>"), "at most"},
@@ -400,6 +412,7 @@ func TestUnlimitedByDefault(t *testing.T) {
 func TestUsageShowsAllowance(t *testing.T) {
 	h, fs, _ := newTestHandler(t)
 	h.Settings = Settings{Limit: 200, LimitPeriod: 30 * 24 * time.Hour, PerPersonLimit: 5, PerPersonLimitPeriod: 24 * time.Hour}
+	fs.openErr = errors.New("trigger expired")
 	_ = h.HandleSlashCommand(context.Background(), propsy("UA", ""))
 	got := fs.lastResponse(t).Text
 	for _, want := range []string{usageNeedle, "*200* propsies/dropsies available", "resets 30d after you first use one", "up to 5 per 1d"} {

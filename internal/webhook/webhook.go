@@ -37,6 +37,7 @@ func (s *Server) Routes() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/slack/commands", s.handleCommand)
 	mux.HandleFunc("/slack/events", s.handleEvent)
+	mux.HandleFunc("/slack/interactions", s.handleInteraction)
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
@@ -60,6 +61,30 @@ func (s *Server) handleCommand(w http.ResponseWriter, r *http.Request) {
 		s.log.Printf("slash command error: %v", err)
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
+	}
+	w.WriteHeader(http.StatusOK)
+}
+
+// handleInteraction processes interactivity payloads: the give form's
+// submission. Other payloads are acknowledged and ignored.
+func (s *Server) handleInteraction(w http.ResponseWriter, r *http.Request) {
+	body, ok := s.verified(w, r)
+	if !ok {
+		return
+	}
+	r.Body = io.NopCloser(bytes.NewReader(body))
+	cb, err := slack.InteractionCallbackParse(r)
+	if err != nil {
+		s.log.Printf("parse interaction: %v", err)
+		http.Error(w, "bad request", http.StatusBadRequest)
+		return
+	}
+	if cb.Type == slack.InteractionTypeViewSubmission {
+		if err := s.handler.HandleViewSubmission(r.Context(), cb); err != nil {
+			s.log.Printf("view submission error: %v", err)
+			http.Error(w, "internal error", http.StatusInternalServerError)
+			return
+		}
 	}
 	w.WriteHeader(http.StatusOK)
 }
