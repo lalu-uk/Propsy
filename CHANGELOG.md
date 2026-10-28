@@ -1,5 +1,23 @@
 # Changelog
 
+## [2.1.0](https://github.com/lalu-uk/Propsy/compare/v2.0.0...v2.1.0) (2026-10-28)
+
+
+### Features
+
+* **slack:** open a give form when /propsy or /dropsy has no recipients ([f5a0a2d](https://github.com/lalu-uk/Propsy/commit/f5a0a2d716d5c2f3536d132db7cdfeca87f37be2))
+* **slack:** open a give form when /propsy or /dropsy has no recipients ([f1c3fe2](https://github.com/lalu-uk/Propsy/commit/f1c3fe2ac82711f44fe32448e9c72f645b6771ef))
+
+
+### Bug Fixes
+
+* **deps:** update module github.com/slack-go/slack to v0.31.0 ([b4a1ab1](https://github.com/lalu-uk/Propsy/commit/b4a1ab18136750579f203d2535a716466a225b0e))
+* **deps:** update module github.com/slack-go/slack to v0.31.0 ([f03a77c](https://github.com/lalu-uk/Propsy/commit/f03a77cdfef8a82323a277e2efdd82e072b74ad6))
+* **deps:** update module google.golang.org/api to v0.309.0 ([4983c79](https://github.com/lalu-uk/Propsy/commit/4983c79f257b4a7aca53834b84f90cdbcdab8631))
+* **deps:** update module google.golang.org/api to v0.309.0 ([c45e38c](https://github.com/lalu-uk/Propsy/commit/c45e38c3353aaccaf11602bb67677bc3d96d101e))
+* **deps:** update module google.golang.org/grpc to v1.85.0 ([873837f](https://github.com/lalu-uk/Propsy/commit/873837ffeff12b225989c5c27bd45239d9bf6b2c))
+* **deps:** update module google.golang.org/grpc to v1.85.0 ([a3d879d](https://github.com/lalu-uk/Propsy/commit/a3d879dbd7f0bc56391d346077547d635e12ab0d))
+
 ## [2.0.0](https://github.com/lalu-uk/Propsy/compare/v1.3.2...v2.0.0) (2026-10-26)
 
 
