@@ -98,8 +98,8 @@ const (
 	commandPropsy = "/propsy"
 	commandDropsy = "/dropsy"
 
-	usagePropsy = "Usage: `/propsy @someone [@another …] for being awesome`"
-	usageDropsy = "Usage: `/dropsy @someone [@another …] for being a menace`"
+	usagePropsy = "Usage: `/propsy @someone [@another …] for that thing`"
+	usageDropsy = "Usage: `/dropsy @someone [@another …] for that thing you did`"
 )
 
 // HandleSlashCommand dispatches `/propsy @user [@user …] [reason]` (give a
