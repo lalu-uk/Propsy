@@ -4,7 +4,7 @@
 #   - Basic Information → App-Level Tokens → scope connections:write → SLACK_APP_TOKEN (xapp-)
 display_information:
   name: Propsy
-  description: Give your teammates a propsy
+  description: Hey that was cool thx
   background_color: "#2c2d30"
 features:
   app_home:
@@ -16,8 +16,8 @@ features:
     always_online: false
   slash_commands:
     - command: /propsy
-      description: Give a propsy to a teammate
-      usage_hint: "@someone for being awesome"
+      description: Hey that was cool thx
+      usage_hint: "@someone for that thing"
       should_escape: true # required: delivers mentions as <@U123|name>
 oauth_config:
   scopes:

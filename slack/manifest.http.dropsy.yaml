@@ -4,7 +4,7 @@
 # Basic Information → Signing Secret → SLACK_SIGNING_SECRET.
 display_information:
   name: Propsy
-  description: Give your teammates a propsy
+  description: Hey that was cool thx
   background_color: "#2c2d30"
 features:
   app_home:
@@ -16,15 +16,15 @@ features:
     always_online: false
   slash_commands:
     - command: /propsy
-      description: Give a propsy to a teammate
-      usage_hint: "@someone for being awesome"
+      description: Hey that was cool thx
+      usage_hint: "@someone for that thing"
       should_escape: true
       url: https://YOUR-SERVICE.run.app/slack/commands
     # Optional: lets people subtract propsies for the lulz. Only use this manifest
     # if that fits your culture; the default manifest has no /dropsy.
     - command: /dropsy
-      description: Give a dropsy to a teammate (takes a propsy away)
-      usage_hint: "@someone for being a menace"
+      description: I didn't like that thing
+      usage_hint: "@someone for that thing you did"
       should_escape: true
       url: https://YOUR-SERVICE.run.app/slack/commands
 oauth_config:
