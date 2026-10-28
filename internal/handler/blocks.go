@@ -210,7 +210,7 @@ func boardBlocks(title string, entries []store.Entry, empty string, cut int) []s
 
 // homeBlocks is the app home dashboard. q is nil when there are no limits.
 func homeBlocks(stats store.Stats, b boards, recent []store.Action, q *quota) []slack.Block {
-	summary := fmt.Sprintf("*Received:* %s\n*Given:* %s\nGive some with `/propsy @someone for being awesome`.",
+	summary := fmt.Sprintf("*Received:* %s\n*Given:* %s\nGive some with `/propsy @someone for that thing`.",
 		totals(stats.PropsiesReceived, stats.DropsiesReceived), totals(stats.PropsiesGiven, stats.DropsiesGiven))
 	if q != nil {
 		summary += "\n" + strings.Join(q.lines(), "\n")
