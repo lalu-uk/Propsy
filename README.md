@@ -86,7 +86,7 @@ arguments.
 
 ## /dropsy (optional)
 
-`/dropsy @someone for being a menace` gives a dropsy, which takes a propsy away. It counts
+`/dropsy @someone for that thing you did` gives a dropsy, which takes a propsy away. It counts
 against the giver's limits like a propsy does, and the Home tab shows both totals
 (`Received: 5 propsies, 10 dropsies`). A person's score on the received board is propsies minus
 dropsies, and negative scores are listed too (at the bottom). It's opt-in because it isn't a
