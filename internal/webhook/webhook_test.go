@@ -5,6 +5,7 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -24,6 +25,7 @@ const (
 	testSigningSecret = "test-signing-secret"
 	keyUserID         = "user_id"
 	keyText           = "text"
+	keyType           = "type"
 )
 
 type fakeSlack struct {
@@ -38,6 +40,10 @@ func (f *fakeSlack) PublishView(userID string, _ slack.HomeTabViewRequest, _ str
 
 func (f *fakeSlack) PostMessage(channelID string, _ ...slack.MsgOption) (string, string, error) {
 	return channelID, "1.1", nil
+}
+
+func (f *fakeSlack) OpenView(_ string, _ slack.ModalViewRequest) (*slack.ViewResponse, error) {
+	return &slack.ViewResponse{}, nil
 }
 
 func (f *fakeSlack) Respond(_ context.Context, _ string, m *slack.WebhookMessage) error {
@@ -163,5 +169,29 @@ func TestHealthz(t *testing.T) {
 	s.Routes().ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/healthz", nil))
 	if rec.Code != http.StatusOK {
 		t.Errorf("status = %d", rec.Code)
+	}
+}
+
+func TestFormSubmissionOverInteractions(t *testing.T) {
+	s, _, repo := newTestServer(t)
+	payload, _ := json.Marshal(map[string]any{
+		keyType: string(slack.InteractionTypeViewSubmission),
+		"user":  map[string]string{"id": "UA"},
+		"view": map[string]any{
+			"callback_id":      "give_form",
+			"private_metadata": `{"command":"/propsy","channel_id":"C1","response_url":"http://resp"}`,
+			"state": map[string]any{"values": map[string]any{
+				"recipients": map[string]any{"recipients": map[string]any{"type": "multi_users_select", "selected_users": []string{"UB"}}},
+				"reason":     map[string]any{"reason": map[string]any{"type": "plain_text_input", "value": "for the help"}},
+			}},
+		},
+	})
+	form := url.Values{"payload": {string(payload)}}
+	rec := post(t, s, "/slack/interactions", "application/x-www-form-urlencoded", form.Encode(), testSigningSecret)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d: %s", rec.Code, rec.Body)
+	}
+	if st, _ := repo.Stats(context.Background(), "UB"); st.PropsiesReceived != 1 {
+		t.Errorf("propsies received = %d, want 1", st.PropsiesReceived)
 	}
 }
