@@ -1,4 +1,5 @@
-# Slack app manifest (WITH the optional /dropsy command) for Cloud Run (HTTP). Replace https://YOUR-SERVICE.run.app.
+# Slack app manifest (WITH the optional /dropsy command) for Cloud Run (HTTP). Template: the service URL goes in every url and request_url below.
+# By hand: replace the service URL in every url and request_url with your URL (e.g. https://YOUR-SERVICE.run.app).
 # Slack treats Socket Mode and HTTP URLs as mutually exclusive: use a separate app per mode.
 # Create the app at https://api.slack.com/apps → "From a manifest", install it → SLACK_BOT_TOKEN (xoxb-);
 # Basic Information → Signing Secret → SLACK_SIGNING_SECRET.
@@ -19,14 +20,14 @@ features:
       description: Hey that was cool thx
       usage_hint: "@someone for that thing"
       should_escape: true
-      url: https://YOUR-SERVICE.run.app/slack/commands
+      url: ${service_url}/slack/commands
     # Optional: lets people subtract propsies for the lulz. Only use this manifest
     # if that fits your culture; the default manifest has no /dropsy.
     - command: /dropsy
       description: I didn't like that thing
       usage_hint: "@someone for that thing you did"
       should_escape: true
-      url: https://YOUR-SERVICE.run.app/slack/commands
+      url: ${service_url}/slack/commands
 oauth_config:
   scopes:
     bot:
@@ -34,12 +35,12 @@ oauth_config:
       - chat:write # only used if PROPSY_ANNOUNCE_CHANNEL is set; then /invite the bot to that channel
 settings:
   event_subscriptions:
-    request_url: https://YOUR-SERVICE.run.app/slack/events
+    request_url: ${service_url}/slack/events
     bot_events:
       - app_home_opened
   interactivity:
     is_enabled: true
-    request_url: https://YOUR-SERVICE.run.app/slack/interactions
+    request_url: ${service_url}/slack/interactions
   org_deploy_enabled: false
   socket_mode_enabled: false
   token_rotation_enabled: false

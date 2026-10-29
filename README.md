@@ -91,7 +91,7 @@ against the giver's limits like a propsy does, and the Home tab shows both total
 (`Received: 5 propsies, 10 dropsies`). A person's score on the received board is propsies minus
 dropsies, and negative scores are listed too (at the bottom). It's opt-in because it isn't a
 friendly pattern for every team: use `slack/manifest.socket.dropsy.yaml` /
-`slack/manifest.http.dropsy.yaml` instead of the default manifests to enable it. Without
+`slack/manifest.http.dropsy.yaml.tftpl` instead of the default manifests to enable it. Without
 that command in the Slack app, nothing else changes.
 
 ## Leaderboards
@@ -128,7 +128,7 @@ Try `/propsy @someone for being great`, then open the app's Home tab.
 
 ## Run on Cloud Run (Webhook Mode)
 
-Use a separate Slack app from [`slack/manifest.http.yaml`](./slack/manifest.http.yaml)
+Use a separate Slack app from [`slack/manifest.http.yaml.tftpl`](./slack/manifest.http.yaml.tftpl)
 (Socket Mode and HTTP URLs are mutually exclusive). Env: `ENVIRONMENT=gcp`,
 `SLACK_BOT_TOKEN`, `SLACK_SIGNING_SECRET`, `GCP_PROJECT_ID`. The runtime service account
 needs `roles/datastore.user`. Cloud Run runs the public image straight from ghcr (use an exact
@@ -139,6 +139,8 @@ version: there's no `latest`):
 gcloud run deploy propsy --image=ghcr.io/lalu-uk/propsy:v3.0.0 --region=<region> ...
 ```
 <!-- x-release-please-end -->
+
+The HTTP manifests are templates: `${service_url}` stands for the Cloud Run service URL. Replace it with your URL by hand, or with any templating tool.
 
 Deployment steps are tracked in `PLAN.md` §6.
 
