@@ -1,5 +1,18 @@
 # Changelog
 
+## [4.0.0](https://github.com/lalu-uk/Propsy/compare/v3.0.0...v4.0.0) (2026-10-29)
+
+
+### ⚠ BREAKING CHANGES
+
+* **store:** the default collection names change, so an existing deployment starts with empty data until its documents are copied from the old names (users, boards, and users/*/received and pairs) to the new ones. Set PROPSY_DB_PREFIX to keep using other names.
+
+### Features
+
+* **slack:** request im:write for DMs ([29117ec](https://github.com/lalu-uk/Propsy/commit/29117ec8ff526939d722004d446eca8c8b6a70a0))
+* **store:** prefix Firestore collections with PROPSY_DB_PREFIX ([4f83abd](https://github.com/lalu-uk/Propsy/commit/4f83abdffdcf2d6d178f9022f5557f608cad749e))
+* **webhook:** add /readyz for Cloud Run readiness probes ([dc356eb](https://github.com/lalu-uk/Propsy/commit/dc356eb659cd9b6e384213d193865e6aa30f81f4))
+
 ## [3.0.0](https://github.com/lalu-uk/Propsy/compare/v2.1.0...v3.0.0) (2026-10-29)
 
 
