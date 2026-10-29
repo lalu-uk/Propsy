@@ -148,3 +148,25 @@ func TestLoadLeaderboardMaxUsers(t *testing.T) {
 		}
 	}
 }
+
+func TestDBPrefix(t *testing.T) {
+	t.Setenv("ENVIRONMENT", "gcp")
+	t.Setenv("SLACK_BOT_TOKEN", "xoxb-1")
+	t.Setenv("SLACK_SIGNING_SECRET", "s")
+	t.Setenv("GCP_PROJECT_ID", "proj")
+
+	t.Setenv("PROPSY_DB_PREFIX", "")
+	if c, err := Load(); err != nil || c.DBPrefix != "propsy" {
+		t.Errorf("default prefix: got %q, err=%v; want propsy", c.DBPrefix, err)
+	}
+	t.Setenv("PROPSY_DB_PREFIX", "propsy_staging")
+	if c, err := Load(); err != nil || c.DBPrefix != "propsy_staging" {
+		t.Errorf("override: got %q, err=%v", c.DBPrefix, err)
+	}
+	for _, bad := range []string{"Propsy", "1propsy", "pro/psy", "pro-psy"} {
+		t.Setenv("PROPSY_DB_PREFIX", bad)
+		if _, err := Load(); err == nil || !strings.Contains(err.Error(), "PROPSY_DB_PREFIX") {
+			t.Errorf("prefix %q: want a clear error, got %v", bad, err)
+		}
+	}
+}

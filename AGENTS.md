@@ -113,6 +113,6 @@ an old env var name working, with a warning, for at least a release when renamin
 
 Local: `SLACK_BOT_TOKEN`, `SLACK_APP_TOKEN`, optional `DB_PATH` (default `./propsy.json`).
 GCP: `ENVIRONMENT=gcp`, `SLACK_BOT_TOKEN`, `SLACK_SIGNING_SECRET`, `GCP_PROJECT_ID`,
-optional `PORT`, `FIRESTORE_DATABASE_ID`.
+optional `PORT`, `FIRESTORE_DATABASE_ID`, `PROPSY_DB_PREFIX` (default `propsy`; collections are `<prefix>_users`, `_received`, `_pairs`, `_boards`).
 Both: optional `PROPSY_LIMIT`, `PROPSY_LIMIT_PERIOD`, `PROPSY_PER_PERSON_LIMIT`,
 `PROPSY_PER_PERSON_LIMIT_PERIOD`, `PROPSY_LEADERBOARD_MAX_USERS`, `PROPSY_ANNOUNCE_CHANNEL` (see `.env.example`).

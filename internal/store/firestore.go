@@ -32,32 +32,44 @@ import (
 // they're enforced atomically and cost O(1) reads. Every query orders on at
 // most one field, so just automatic single-field indexes are needed: no
 // composite index to provision.
-const (
-	usersCollection    = "users"
-	receivedCollection = "received"
-	pairsCollection    = "pairs"
-	boardsCollection   = "boards"
-	boardsDoc          = "all"
-)
+const boardsDoc = "all"
+
+// collections are the Firestore collection names. Every one carries the
+// configured prefix (PROPSY_DB_PREFIX, default "propsy") so Propsy can share a
+// database with other apps without collisions: propsy_users, propsy_boards, ...
+type collections struct {
+	users, received, pairs, boards string
+}
+
+func newCollections(prefix string) collections {
+	return collections{
+		users:    prefix + "_users",
+		received: prefix + "_received",
+		pairs:    prefix + "_pairs",
+		boards:   prefix + "_boards",
+	}
+}
 
 // Firestore is a Repository backed by Google Cloud Firestore. Firestore
 // bills per operation and storage, so an idle instance costs ~nothing.
 type Firestore struct {
 	client *firestore.Client
+	c      collections
 }
 
 // NewFirestore opens a client for projectID/databaseID ("(default)" for the
-// default database). FIRESTORE_EMULATOR_HOST, if set, redirects to the emulator.
-func NewFirestore(ctx context.Context, projectID, databaseID string) (*Firestore, error) {
+// default database), with collection names under prefix. FIRESTORE_EMULATOR_HOST,
+// if set, redirects to the emulator.
+func NewFirestore(ctx context.Context, projectID, databaseID, prefix string) (*Firestore, error) {
 	client, err := firestore.NewClientWithDatabase(ctx, projectID, databaseID)
 	if err != nil {
 		return nil, fmt.Errorf("open firestore client (project %q, database %q): %w", projectID, databaseID, err)
 	}
-	return &Firestore{client: client}, nil
+	return &Firestore{client: client, c: newCollections(prefix)}, nil
 }
 
 func (f *Firestore) user(id string) *firestore.DocumentRef {
-	return f.client.Collection(usersCollection).Doc(id)
+	return f.client.Collection(f.c.users).Doc(id)
 }
 
 // windowDoc is the rate-limit window as stored on a user or pair document.
@@ -110,7 +122,7 @@ func (f *Firestore) AddActions(ctx context.Context, actions []Action, lim Limits
 		}
 		if lim.PerPerson > 0 {
 			for _, to := range order {
-				if pairs[to], err = readWindow(tx, from.Collection(pairsCollection).Doc(to)); err != nil {
+				if pairs[to], err = readWindow(tx, from.Collection(f.c.pairs).Doc(to)); err != nil {
 					return err
 				}
 			}
@@ -125,7 +137,7 @@ func (f *Firestore) AddActions(ctx context.Context, actions []Action, lim Limits
 		received := map[string]counters{}
 		var given counters
 		for _, a := range actions {
-			if err := tx.Create(f.user(a.To).Collection(receivedCollection).NewDoc(), a); err != nil {
+			if err := tx.Create(f.user(a.To).Collection(f.c.received).NewDoc(), a); err != nil {
 				return err
 			}
 			c := received[a.To]
@@ -152,7 +164,7 @@ func (f *Firestore) AddActions(ctx context.Context, actions []Action, lim Limits
 		for to, c := range received {
 			scores[to] = firestore.Increment(c.propsies - c.dropsies)
 		}
-		err = tx.Set(f.client.Collection(boardsCollection).Doc(boardsDoc), map[string]any{
+		err = tx.Set(f.client.Collection(f.c.boards).Doc(boardsDoc), map[string]any{
 			"received": scores,
 			"given":    map[string]any{actions[0].From: firestore.Increment(len(actions))},
 		}, firestore.MergeAll)
@@ -171,7 +183,7 @@ func (f *Firestore) AddActions(ctx context.Context, actions []Action, lim Limits
 			return err
 		}
 		for to, w := range newPairs {
-			err := tx.Set(from.Collection(pairsCollection).Doc(to),
+			err := tx.Set(from.Collection(f.c.pairs).Doc(to),
 				map[string]any{"windowStart": w.Start, "windowUsed": w.Used}, firestore.MergeAll)
 			if err != nil {
 				return err
@@ -238,7 +250,7 @@ func (f *Firestore) Leaderboard(ctx context.Context, board Board, limit int) ([]
 	default:
 		return nil, fmt.Errorf("leaderboard: unknown board %d", board)
 	}
-	snap, err := f.client.Collection(boardsCollection).Doc(boardsDoc).Get(ctx)
+	snap, err := f.client.Collection(f.c.boards).Doc(boardsDoc).Get(ctx)
 	if status.Code(err) == codes.NotFound {
 		return nil, nil
 	}
@@ -259,7 +271,7 @@ func (f *Firestore) Leaderboard(ctx context.Context, board Board, limit int) ([]
 
 // Recent implements Repository.
 func (f *Firestore) Recent(ctx context.Context, userID string, limit int) ([]Action, error) {
-	it := f.user(userID).Collection(receivedCollection).
+	it := f.user(userID).Collection(f.c.received).
 		OrderBy("createdAt", firestore.Desc).Limit(limit).Documents(ctx)
 	defer it.Stop()
 	var out []Action
