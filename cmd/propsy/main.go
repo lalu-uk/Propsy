@@ -30,6 +30,9 @@ import (
 var version = "dev"
 
 func main() {
+	if code := cli(os.Args[1:], os.Stdout, os.Stderr); code >= 0 {
+		os.Exit(code)
+	}
 	if err := run(); err != nil {
 		fmt.Fprintln(os.Stderr, "Propsy:", err)
 		os.Exit(1)
