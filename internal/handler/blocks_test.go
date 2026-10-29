@@ -92,12 +92,12 @@ func TestQuotaWithOnlyPerPersonLimit(t *testing.T) {
 }
 
 func TestAnnouncementBlocks(t *testing.T) {
-	out := render(t, announcementBlocks("UA", []string{"UB", "UC"}, "line1\nline2", 1))
+	out := render(t, announcementBlocks("UA", []string{"UB", "UC"}, "line1\nline2", 1, 1))
 	assertContains(t, out, ":raised_hands: <@UA> gave a propsy to <@UB>, <@UC>", ">line1\\n>line2")
-	if strings.Contains(render(t, announcementBlocks("UA", []string{"UB"}, "", 1)), `\n>`) {
+	if strings.Contains(render(t, announcementBlocks("UA", []string{"UB"}, "", 1, 1)), `\n>`) {
 		t.Error("no quote expected without a reason")
 	}
-	assertContains(t, render(t, announcementBlocks("UA", []string{"UB"}, "menace", -1)),
+	assertContains(t, render(t, announcementBlocks("UA", []string{"UB"}, "menace", -1, 1)),
 		":droplet: <@UA> gave a dropsy to <@UB>", ">menace")
 }
 

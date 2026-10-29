@@ -56,12 +56,26 @@ func announcementText(delta int) string {
 	return ":raised_hands: propsy!"
 }
 
-// announcementBlocks is the public announcement for a propsy (delta > 0) or a
-// dropsy (delta < 0); each person named gets one.
-func announcementBlocks(from string, to []string, reason string, delta int) []slack.Block {
-	text := fmt.Sprintf(":raised_hands: <@%s> gave a propsy to %s", from, mentions(to))
+// giftNoun is "a propsy" or "5 dropsies" for the announcement.
+func giftNoun(delta, count int) string {
 	if delta < 0 {
-		text = fmt.Sprintf(":droplet: <@%s> gave a dropsy to %s", from, mentions(to))
+		if count == 1 {
+			return "a dropsy"
+		}
+		return dropsies(count)
+	}
+	if count == 1 {
+		return "a propsy"
+	}
+	return propsies(count)
+}
+
+// announcementBlocks is the public announcement for a propsy (delta > 0) or a
+// dropsy (delta < 0), count of them to each person named.
+func announcementBlocks(from string, to []string, reason string, delta, count int) []slack.Block {
+	text := fmt.Sprintf(":raised_hands: <@%s> gave %s to %s", from, giftNoun(delta, count), mentions(to))
+	if delta < 0 {
+		text = fmt.Sprintf(":droplet: <@%s> gave %s to %s", from, giftNoun(delta, count), mentions(to))
 	}
 	if reason != "" {
 		text += "\n>" + strings.ReplaceAll(reason, "\n", "\n>")
@@ -210,7 +224,7 @@ func boardBlocks(title string, entries []store.Entry, empty string, cut int) []s
 
 // homeBlocks is the app home dashboard. q is nil when there are no limits.
 func homeBlocks(stats store.Stats, b boards, recent []store.Action, q *quota) []slack.Block {
-	summary := fmt.Sprintf("*Received:* %s\n*Given:* %s\nGive some with `/propsy @someone for that thing`.",
+	summary := fmt.Sprintf("*Received:* %s\n*Given:* %s\nGive some with `/propsy 2 @someone for that thing`.",
 		totals(stats.PropsiesReceived, stats.DropsiesReceived), totals(stats.PropsiesGiven, stats.DropsiesGiven))
 	if q != nil {
 		summary += "\n" + strings.Join(q.lines(), "\n")

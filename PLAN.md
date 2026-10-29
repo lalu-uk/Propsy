@@ -45,6 +45,12 @@ Single-workspace by design (bot token from env) — self-hosted per workspace.
   `response_url`, so the submission (`view_submission` via interactivity: `/slack/interactions`
   over HTTP, or the socket) replies the same way a command does. Interactivity is on in both
   manifests; the HTTP one needs its `request_url` set to the service.
+- Counts: a leading whole number (1 to 5, default 1) is how many propsies to give each person,
+  stored as N action rows so each counts against the limits. A leading number is always the
+  count; the form's count field does the same, with no default.
+- The form refreshes on a people selection (`block_actions` → `views.update`), showing each
+  picked person's per-person allowance left. A single `views.update` per selection change, no
+  store writes; one `PairAllowance` read per person picked.
 - Event `app_home_opened` → `views.publish` for the opener. Home tabs are built only when
   opened, never pushed after a command: a live refresh of the giver and every recipient meant
   up to 11 sequential `views.publish` calls on the 3 s ack path, and a tab is rebuilt on

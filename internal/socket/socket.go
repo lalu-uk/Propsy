@@ -136,11 +136,20 @@ func (r *Runner) process(ctx context.Context, evt socketmode.Event) {
 
 	case socketmode.EventTypeInteractive:
 		cb, ok := evt.Data.(slack.InteractionCallback)
-		if !ok || cb.Type != slack.InteractionTypeViewSubmission {
+		if !ok {
 			return
 		}
-		if err := r.handler.HandleViewSubmission(ctx, cb); err != nil {
-			r.log.Printf("view submission error: %v", err)
+		var err error
+		switch cb.Type {
+		case slack.InteractionTypeViewSubmission:
+			err = r.handler.HandleViewSubmission(ctx, cb)
+		case slack.InteractionTypeBlockActions:
+			err = r.handler.HandleBlockAction(ctx, cb)
+		default:
+			return
+		}
+		if err != nil {
+			r.log.Printf("interaction %s error: %v", cb.Type, err)
 		}
 
 	case socketmode.EventTypeEventsAPI:

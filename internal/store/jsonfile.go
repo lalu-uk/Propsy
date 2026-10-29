@@ -262,6 +262,18 @@ func (s *JSONFile) Allowance(_ context.Context, userID string, period time.Durat
 	return Allowance{Used: w.Used, ResetsAt: w.resetsAt(period)}, nil
 }
 
+// PairAllowance implements Repository.
+func (s *JSONFile) PairAllowance(_ context.Context, from, to string, period time.Duration, now time.Time) (Allowance, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	u := s.data.Users[from]
+	if u == nil {
+		return Allowance{}, nil
+	}
+	w := u.Pairs[to].live(now, period)
+	return Allowance{Used: w.Used, ResetsAt: w.resetsAt(period)}, nil
+}
+
 // Stats implements Repository.
 func (s *JSONFile) Stats(_ context.Context, userID string) (Stats, error) {
 	s.mu.Lock()

@@ -84,6 +84,10 @@ type Repository interface {
 	// Allowance reports how much of the overall limit userID has used in the
 	// window open as of now, for a limit with the given period.
 	Allowance(ctx context.Context, userID string, period time.Duration, now time.Time) (Allowance, error)
+	// PairAllowance reports how much of the per-person limit from giver to
+	// recipient is used in the window open as of now, for a limit with the given
+	// period.
+	PairAllowance(ctx context.Context, from, to string, period time.Duration, now time.Time) (Allowance, error)
 	// Stats returns zero totals for an unknown user.
 	Stats(ctx context.Context, userID string) (Stats, error)
 	// Leaderboard returns up to limit entries of board, highest first and with

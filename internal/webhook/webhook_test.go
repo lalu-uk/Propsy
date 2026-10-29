@@ -42,6 +42,10 @@ func (f *fakeSlack) PostMessage(channelID string, _ ...slack.MsgOption) (string,
 	return channelID, "1.1", nil
 }
 
+func (f *fakeSlack) UpdateView(_ slack.ModalViewRequest, _, _, _ string) (*slack.ViewResponse, error) {
+	return &slack.ViewResponse{}, nil
+}
+
 func (f *fakeSlack) OpenView(_ string, _ slack.ModalViewRequest) (*slack.ViewResponse, error) {
 	return &slack.ViewResponse{}, nil
 }

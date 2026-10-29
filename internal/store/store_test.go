@@ -166,6 +166,9 @@ func testLimits(t *testing.T, r Repository, uniq string) {
 	if al, err := r.Allowance(ctx, g, day, base); err != nil || al != (Allowance{}) {
 		t.Fatalf("fresh Allowance = %+v, %v; want zero", al, err)
 	}
+	if al, err := r.PairAllowance(ctx, g, x, day, base); err != nil || al != (Allowance{}) {
+		t.Fatalf("fresh PairAllowance = %+v, %v; want zero", al, err)
+	}
 
 	// Two to X: the per-person cap (2) is now reached.
 	if err := give(base, x); err != nil {
@@ -173,6 +176,12 @@ func testLimits(t *testing.T, r Repository, uniq string) {
 	}
 	if err := give(base.Add(time.Hour), x); err != nil {
 		t.Fatal(err)
+	}
+	if al, err := r.PairAllowance(ctx, g, x, day, base.Add(time.Hour)); err != nil || al.Used != 2 || al.ResetsAt.IsZero() {
+		t.Fatalf("PairAllowance after two = %+v, %v; want Used 2 with a reset time", al, err)
+	}
+	if al, err := r.PairAllowance(ctx, g, y, day, base.Add(time.Hour)); err != nil || al.Used != 0 {
+		t.Fatalf("PairAllowance to another person = %+v, %v; want Used 0", al, err)
 	}
 	le := wantLimit(give(base.Add(2*time.Hour), x), LimitPerPerson)
 	if len(le.Capped) != 1 || le.Capped[0].UserID != x || !le.Capped[0].ResetsAt.Equal(base.Add(day)) || le.Limit != 2 {

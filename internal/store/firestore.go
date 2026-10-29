@@ -218,6 +218,23 @@ func (f *Firestore) Allowance(ctx context.Context, userID string, period time.Du
 	return Allowance{Used: w.Used, ResetsAt: w.resetsAt(period)}, nil
 }
 
+// PairAllowance implements Repository: one read of the per-person window.
+func (f *Firestore) PairAllowance(ctx context.Context, from, to string, period time.Duration, now time.Time) (Allowance, error) {
+	snap, err := f.user(from).Collection(f.c.pairs).Doc(to).Get(ctx)
+	if status.Code(err) == codes.NotFound {
+		return Allowance{}, nil
+	}
+	if err != nil {
+		return Allowance{}, fmt.Errorf("pair allowance: %w", err)
+	}
+	var d windowDoc
+	if err := snap.DataTo(&d); err != nil {
+		return Allowance{}, fmt.Errorf("decode pair allowance: %w", err)
+	}
+	w := d.window().live(now, period)
+	return Allowance{Used: w.Used, ResetsAt: w.resetsAt(period)}, nil
+}
+
 // Stats implements Repository.
 func (f *Firestore) Stats(ctx context.Context, userID string) (Stats, error) {
 	snap, err := f.user(userID).Get(ctx)
