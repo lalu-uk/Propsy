@@ -75,6 +75,7 @@ There is no `latest` tag: always use an exact version. To check what you've down
 | `PROPSY_LIMIT_PERIOD` | `30d` | Window length: it starts when someone first gives one, and the allowance resets in full once it has elapsed. Units `s`, `m`, `h`, `d`, `w`, combinable: `30s`, `24h`, `2w`, `1d12h`. |
 | `PROPSY_PER_PERSON_LIMIT` | `5` | Most one person can give any single other person per window. `0` = unlimited. |
 | `PROPSY_PER_PERSON_LIMIT_PERIOD` | `1d` | Window length for the per-person limit, same rules. |
+| `PROPSY_DB_PREFIX` | `propsy` | GCP only. Prefix for Firestore collections (`propsy_users`, `propsy_boards`, ...), so Propsy can share a database. Changing it points the app at different collections: copy the data first. |
 | `PROPSY_LEADERBOARD_MAX_USERS` | `0` | Most people each leaderboard lists. `0` = everyone. Hard maximum 1000: larger values are lowered to 1000 with a startup warning. |
 | `PROPSY_ANNOUNCE_CHANNEL` | _(unset)_ | Announce in this channel instead of where the command was run. Channel ID recommended (`C0123ABCDEF`); `#name` works for public channels. Invite the bot first. |
 

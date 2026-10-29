@@ -102,7 +102,7 @@ func runSocket(cfg *config.Config, logger *log.Logger) error {
 // for the cold-start/3s-ack tradeoff this implies.
 func runWebhook(cfg *config.Config, logger *log.Logger) error {
 	ctx := context.Background()
-	repo, err := store.NewFirestore(ctx, cfg.GCPProjectID, cfg.FirestoreDatabaseID)
+	repo, err := store.NewFirestore(ctx, cfg.GCPProjectID, cfg.FirestoreDatabaseID, cfg.DBPrefix)
 	if err != nil {
 		return err
 	}

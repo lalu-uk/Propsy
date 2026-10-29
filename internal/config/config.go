@@ -4,6 +4,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"regexp"
 	"strconv"
 	"time"
 )
@@ -57,7 +58,13 @@ type Config struct {
 	SlackSigningSecret  string // verifies inbound Slack requests
 	GCPProjectID        string // Firestore project
 	FirestoreDatabaseID string // usually "(default)"
+	// DBPrefix namespaces the Firestore collections (propsy_users, ...), so
+	// Propsy can share a database with other apps. Lowercase letters, digits
+	// and underscores, starting with a letter.
+	DBPrefix string
 }
+
+var dbPrefixRE = regexp.MustCompile(`^[a-z][a-z0-9_]*$`)
 
 // Load reads configuration from the environment, falling back to a ".env"
 // file in the working directory for anything unset (real environment
@@ -106,6 +113,10 @@ func Load() (*Config, error) {
 		if c.FirestoreDatabaseID != "(default)" {
 			c.Warnings = append(c.Warnings, fmt.Sprintf("FIRESTORE_DATABASE_ID=%q is a named database: Firestore's free quota only covers (default), so every read and write is billed",
 				c.FirestoreDatabaseID))
+		}
+		c.DBPrefix = envOr("PROPSY_DB_PREFIX", "propsy")
+		if !dbPrefixRE.MatchString(c.DBPrefix) {
+			return nil, fmt.Errorf("PROPSY_DB_PREFIX=%q must be lowercase letters, digits and underscores, starting with a letter", c.DBPrefix)
 		}
 		if c.SlackSigningSecret == "" {
 			missing = append(missing, "SLACK_SIGNING_SECRET")

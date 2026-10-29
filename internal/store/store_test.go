@@ -114,7 +114,7 @@ func TestFirestoreRepository(t *testing.T) {
 	if os.Getenv("FIRESTORE_EMULATOR_HOST") == "" {
 		t.Skip("FIRESTORE_EMULATOR_HOST not set; skipping Firestore emulator test")
 	}
-	f, err := NewFirestore(context.Background(), "propsy-test", "(default)")
+	f, err := NewFirestore(context.Background(), "propsy-test", "(default)", "propsy_test")
 	if err != nil {
 		t.Fatalf("NewFirestore: %v", err)
 	}
