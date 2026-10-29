@@ -212,7 +212,7 @@ share a rank. No composite index is needed anywhere.
   CI talks to GCP. The cost: the pinned version and checksum in `firestore.sh` are updated by
   hand, and the jar comes from `firebase-preview-drop`, the bucket firebase-tools itself uses.
 - **Dependency updates:** Renovate (`config:best-practices`, so actions stay pinned by SHA). The
-  org's inherited config (`lalu-uk/devops-renovate`) holds everything except GitHub Actions back
+  org's inherited Renovate config holds everything except GitHub Actions back
   behind approval on the Dependency Dashboard; this repo's `renovate.json` overrides that
   (`dependencyDashboardApproval: false`), so updates arrive as PRs by themselves, paced by Renovate's
   default limits (2 PRs an hour, 10 open at once). Repo config takes precedence over inherited config.
