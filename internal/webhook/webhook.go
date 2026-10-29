@@ -97,12 +97,17 @@ func (s *Server) handleInteraction(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "bad request", http.StatusBadRequest)
 		return
 	}
-	if cb.Type == slack.InteractionTypeViewSubmission {
-		if err := s.handler.HandleViewSubmission(r.Context(), cb); err != nil {
-			s.log.Printf("view submission error: %v", err)
-			http.Error(w, "internal error", http.StatusInternalServerError)
-			return
-		}
+	var handleErr error
+	switch cb.Type {
+	case slack.InteractionTypeViewSubmission:
+		handleErr = s.handler.HandleViewSubmission(r.Context(), cb)
+	case slack.InteractionTypeBlockActions:
+		handleErr = s.handler.HandleBlockAction(r.Context(), cb)
+	}
+	if handleErr != nil {
+		s.log.Printf("interaction %s error: %v", cb.Type, handleErr)
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
 	}
 	w.WriteHeader(http.StatusOK)
 }

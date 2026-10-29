@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"log/slog"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -18,9 +19,10 @@ import (
 )
 
 const (
-	maxRecipients  = 10
-	maxReasonRunes = 500
-	recentCount    = 5
+	maxRecipients   = 10
+	maxPerRecipient = 5
+	maxReasonRunes  = 500
+	recentCount     = 5
 )
 
 // SlackAPI is the subset of Slack the handler needs. Defining it here keeps
@@ -31,6 +33,8 @@ type SlackAPI interface {
 	// OpenView opens a modal from a slash command's trigger_id, which Slack
 	// only accepts for about 3 seconds.
 	OpenView(triggerID string, view slack.ModalViewRequest) (*slack.ViewResponse, error)
+	// UpdateView replaces an open modal, for the form's live allowance lines.
+	UpdateView(view slack.ModalViewRequest, externalID, hash, viewID string) (*slack.ViewResponse, error)
 	// Respond posts to a slash command's response_url, which works in any
 	// channel whether or not the bot has been invited to it.
 	Respond(ctx context.Context, responseURL string, msg *slack.WebhookMessage) error
@@ -98,8 +102,8 @@ const (
 	commandPropsy = "/propsy"
 	commandDropsy = "/dropsy"
 
-	usagePropsy = "Usage: `/propsy @someone [@another …] for that thing`"
-	usageDropsy = "Usage: `/dropsy @someone [@another …] for that thing you did`"
+	usagePropsy = "Usage: `/propsy [count] @someone [@another …] for that thing`"
+	usageDropsy = "Usage: `/dropsy [count] @someone [@another …] for that thing you did`"
 )
 
 // HandleSlashCommand dispatches `/propsy @user [@user …] [reason]` (give a
@@ -111,7 +115,11 @@ func (h *Handler) HandleSlashCommand(ctx context.Context, cmd slack.SlashCommand
 		return h.ephemeral(ctx, cmd, fmt.Sprintf("Sorry, I only answer to `%s` and `%s`, not `%s`.", commandPropsy, commandDropsy, cmd.Command))
 	}
 
-	recipients, reason := parseCommand(cmd.Text)
+	count, rest, err := parseCount(cmd.Text)
+	if err != nil {
+		return h.ephemeral(ctx, cmd, err.Error())
+	}
+	recipients, reason := parseCommand(rest)
 	if len(recipients) == 0 {
 		if err := h.openForm(ctx, cmd, delta); err != nil {
 			slog.Warn("open give form; showing usage instead", "err", err)
@@ -119,7 +127,33 @@ func (h *Handler) HandleSlashCommand(ctx context.Context, cmd slack.SlashCommand
 		}
 		return nil
 	}
-	return h.give(ctx, cmd, delta, recipients, reason)
+	return h.give(ctx, cmd, delta, recipients, reason, count)
+}
+
+// parseCount reads an optional count from the front of text: a leading whole
+// number is how many propsies or dropsies to give each person, from 1 to
+// maxPerRecipient. Without one the count is 1. A leading number is always the
+// count, so a reason can't start with one.
+func parseCount(text string) (count int, rest string, err error) {
+	text = strings.TrimSpace(text)
+	first, after, _ := strings.Cut(text, " ")
+	if first == "" || !isDigits(first) {
+		return 1, text, nil
+	}
+	n, convErr := strconv.Atoi(first)
+	if convErr != nil || n < 1 || n > maxPerRecipient {
+		return 0, "", fmt.Errorf("the count must be from 1 to %d, not `%s`", maxPerRecipient, first)
+	}
+	return n, strings.TrimSpace(after), nil
+}
+
+func isDigits(s string) bool {
+	for _, r := range s {
+		if r < '0' || r > '9' {
+			return false
+		}
+	}
+	return true
 }
 
 // commandDelta maps a command name to its delta and usage line.
@@ -135,7 +169,7 @@ func commandDelta(command string) (delta int, usage string, ok bool) {
 
 // give records a propsy (delta 1) or dropsy (delta -1) from cmd.UserID to each
 // recipient and announces it. Shared by the slash command and the form.
-func (h *Handler) give(ctx context.Context, cmd slack.SlashCommand, delta int, recipients []string, reason string) error {
+func (h *Handler) give(ctx context.Context, cmd slack.SlashCommand, delta int, recipients []string, reason string, count int) error {
 	var others []string
 	for _, r := range recipients {
 		if r != cmd.UserID {
@@ -151,14 +185,17 @@ func (h *Handler) give(ctx context.Context, cmd slack.SlashCommand, delta int, r
 	}
 
 	now := h.Now()
-	actions := make([]store.Action, len(others))
-	for i, to := range others {
-		actions[i] = store.Action{From: cmd.UserID, To: to, Reason: reason, ChannelID: cmd.ChannelID, CreatedAt: now, Delta: delta}
+	// One action row per propsy, so each counts against the limits.
+	actions := make([]store.Action, 0, len(others)*count)
+	for _, to := range others {
+		for range count {
+			actions = append(actions, store.Action{From: cmd.UserID, To: to, Reason: reason, ChannelID: cmd.ChannelID, CreatedAt: now, Delta: delta})
+		}
 	}
 	if err := h.Store.AddActions(ctx, actions, h.limits(), now); err != nil {
 		var limitErr *store.LimitError
 		if errors.As(err, &limitErr) {
-			return h.ephemeral(ctx, cmd, limitMessage(limitErr, len(others)))
+			return h.ephemeral(ctx, cmd, limitMessage(limitErr, len(actions)))
 		}
 		_ = h.ephemeral(ctx, cmd, "Sorry, something went wrong recording that. Please try again.")
 		return err
@@ -166,15 +203,15 @@ func (h *Handler) give(ctx context.Context, cmd slack.SlashCommand, delta int, r
 
 	// Home tabs aren't refreshed here: a tab is rebuilt from the store whenever
 	// it's opened, and doing it live would put Slack calls on the 3s ack path.
-	return h.announce(ctx, cmd, others, reason, delta)
+	return h.announce(ctx, cmd, others, reason, delta, count)
 }
 
 // announce posts the public announcement: to AnnounceChannel when configured
 // (confirming to the giver privately), otherwise, or if that fails, to the
 // channel the command was run in.
-func (h *Handler) announce(ctx context.Context, cmd slack.SlashCommand, to []string, reason string, delta int) error {
-	blocks := announcementBlocks(cmd.UserID, to, reason, delta)
-	text := fmt.Sprintf("%s <@%s> gave one to %s.", announcementText(delta), cmd.UserID, mentions(to))
+func (h *Handler) announce(ctx context.Context, cmd slack.SlashCommand, to []string, reason string, delta, count int) error {
+	blocks := announcementBlocks(cmd.UserID, to, reason, delta, count)
+	text := fmt.Sprintf("%s <@%s> gave %s to %s.", announcementText(delta), cmd.UserID, giftNoun(delta, count), mentions(to))
 	if reason != "" {
 		text += " Reason: " + reason
 	}

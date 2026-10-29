@@ -24,12 +24,18 @@ type fakeSlack struct {
 	postErr   error
 	published map[string]slack.HomeTabViewRequest
 	opened    []openedView
+	updated   []openedView
 	openErr   error
 }
 
 type openedView struct {
 	triggerID string
 	view      slack.ModalViewRequest
+}
+
+func (f *fakeSlack) UpdateView(v slack.ModalViewRequest, _, _, viewID string) (*slack.ViewResponse, error) {
+	f.updated = append(f.updated, openedView{triggerID: viewID, view: v})
+	return &slack.ViewResponse{}, nil
 }
 
 func (f *fakeSlack) OpenView(triggerID string, v slack.ModalViewRequest) (*slack.ViewResponse, error) {
@@ -85,7 +91,7 @@ func newTestHandler(t *testing.T) (*Handler, *fakeSlack, store.Repository) {
 
 const (
 	kudosChannel = "CKUDOS"
-	usageNeedle  = "/propsy @someone"
+	usageNeedle  = "/propsy [count] @someone"
 )
 
 func propsy(user, text string) slack.SlashCommand {
@@ -473,5 +479,30 @@ func TestAnnounceChannelFailureFallsBack(t *testing.T) {
 	}
 	if st, _ := repo.Stats(context.Background(), "UB"); st.PropsiesReceived != 1 {
 		t.Errorf("the propsy should still be recorded")
+	}
+}
+
+func TestParseCount(t *testing.T) {
+	const shipping = "<@UA> for shipping"
+	tests := []struct {
+		text     string
+		want     int
+		wantRest string
+		wantErr  bool
+	}{
+		{shipping, 1, shipping, false},
+		{"2 <@UA> for shipping", 2, "<@UA> for shipping", false},
+		{"5 <@UA>", 5, "<@UA>", false},
+		{"  3   <@UA>  ", 3, "<@UA>", false},
+		{"<@UA> 2 for shipping", 1, "<@UA> 2 for shipping", false},
+		{"0 <@UA>", 0, "", true},
+		{"6 <@UA>", 0, "", true},
+		{"", 1, "", false},
+	}
+	for _, tt := range tests {
+		got, rest, err := parseCount(tt.text)
+		if (err != nil) != tt.wantErr || (!tt.wantErr && (got != tt.want || rest != tt.wantRest)) {
+			t.Errorf("parseCount(%q) = %d, %q, %v; want %d, %q, err=%v", tt.text, got, rest, err, tt.want, tt.wantRest, tt.wantErr)
+		}
 	}
 }

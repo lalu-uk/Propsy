@@ -18,14 +18,14 @@ features:
   slash_commands:
     - command: /propsy
       description: Hey that was cool thx
-      usage_hint: "@someone for that thing"
+      usage_hint: "[count] @someone for that thing"
       should_escape: true
       url: ${service_url}/slack/commands
     # Optional: lets people subtract propsies for the lulz. Only use this manifest
     # if that fits your culture; the default manifest has no /dropsy.
     - command: /dropsy
       description: I didn't like that thing
-      usage_hint: "@someone for that thing you did"
+      usage_hint: "[count] @someone for that thing you did"
       should_escape: true
       url: ${service_url}/slack/commands
 oauth_config:
