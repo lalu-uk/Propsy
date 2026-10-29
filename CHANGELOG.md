@@ -1,5 +1,53 @@
 # Changelog
 
+## [3.0.0](https://github.com/lalu-uk/Propsy/compare/v2.1.0...v3.0.0) (2026-10-29)
+
+
+### ⚠ BREAKING CHANGES
+
+* **release:** ship archives per platform, sign only checksums.txt
+
+### Features
+
+* add propsy and dropsy kudos bot with Slack and Firestore support ([016200a](https://github.com/lalu-uk/Propsy/commit/016200ab87da2261b3f8b25dd05447fdf821a70b))
+* add propsy and dropsy kudos bot with Slack and Firestore support ([495eb0f](https://github.com/lalu-uk/Propsy/commit/495eb0fe44477e60b82c3e500b6a5e8501908973))
+* add propsy entrypoint with socket and webhook modes ([17aba02](https://github.com/lalu-uk/Propsy/commit/17aba0207a490c7e6a7a58dbb59f75176c44f01f))
+* **cli:** add --help and --version ([2dfc341](https://github.com/lalu-uk/Propsy/commit/2dfc3412ef9ea071a399505bee4678d26d07f7cf))
+* **leaderboard:** list everyone on received and given boards ([b76493b](https://github.com/lalu-uk/Propsy/commit/b76493bf9fa8fef5cdb1a7af9f4010063f708ccf))
+* leaderboards for everyone, immutable and signed releases ([f843f3b](https://github.com/lalu-uk/Propsy/commit/f843f3bd5889bae54da5f2d9626c5a689398d244))
+* **readme:** add logo and credit Flaticon attribution ([9eb842c](https://github.com/lalu-uk/Propsy/commit/9eb842c7e4242f17da53f78e10aa68ab8020040d))
+* **readme:** add logo and credit Flaticon attribution ([abf6a48](https://github.com/lalu-uk/Propsy/commit/abf6a489ef55ff180b8e0cb0c83fcf624a382387))
+* **release:** ship archives per platform, sign only checksums.txt ([a7270ac](https://github.com/lalu-uk/Propsy/commit/a7270ac720456fd06ff79bc4871fc916e20cc5b3))
+* **slack:** open a give form when /propsy or /dropsy has no recipients ([e198f2a](https://github.com/lalu-uk/Propsy/commit/e198f2a805b2ac6751580f5c6f5b43ac5c687c40))
+* **slack:** open a give form when /propsy or /dropsy has no recipients ([f35e12c](https://github.com/lalu-uk/Propsy/commit/f35e12ced00691ef262c0e666da26ac37bd7ea99))
+* **store:** keep local data in a JSON file instead of SQLite ([0580222](https://github.com/lalu-uk/Propsy/commit/05802222314ae5a20845c93fb4d4964ae0dadd28))
+* **store:** keep local data in a JSON file instead of SQLite ([bdfea78](https://github.com/lalu-uk/Propsy/commit/bdfea780d80d50902413311b1fe1a326fd9ac914))
+
+
+### Bug Fixes
+
+* **config:** warn when a named Firestore database forfeits the free tier ([f01a67b](https://github.com/lalu-uk/Propsy/commit/f01a67b6b2c74300a6ad1499e9f00a22fa5d3319))
+* **config:** warn when a named Firestore database forfeits the free tier ([602d600](https://github.com/lalu-uk/Propsy/commit/602d6006631333e484fc86099ba248a697b2d94d))
+* **deps:** update module cloud.google.com/go/firestore to v1.29.0 ([b00eb1d](https://github.com/lalu-uk/Propsy/commit/b00eb1d1a2fd1b8fb33234bce433beab218b245d))
+* **deps:** update module cloud.google.com/go/firestore to v1.29.0 ([2303190](https://github.com/lalu-uk/Propsy/commit/2303190ae7a57e92ba166906d0e1f18e94145d11))
+* **deps:** update module cloud.google.com/go/firestore to v1.29.1 ([8cbf18a](https://github.com/lalu-uk/Propsy/commit/8cbf18a3f0d6b9f8b4a39a47da3d3fa01aec94b9))
+* **deps:** update module github.com/slack-go/slack to v0.31.0 ([cabba61](https://github.com/lalu-uk/Propsy/commit/cabba610a0f8e27989711bfce2a3bcef17cadfef))
+* **deps:** update module github.com/slack-go/slack to v0.31.0 ([9cdc4b6](https://github.com/lalu-uk/Propsy/commit/9cdc4b6d919f9ea2278968e411787a08dd09ced2))
+* **deps:** update module github.com/slack-go/slack to v0.32.0 ([23196be](https://github.com/lalu-uk/Propsy/commit/23196be55117e3ca89ecaaac89ad1c24cdc2fa03))
+* **deps:** update module google.golang.org/api to v0.308.0 ([530ccce](https://github.com/lalu-uk/Propsy/commit/530ccce7a46635424838166f674412bb90332a95))
+* **deps:** update module google.golang.org/api to v0.308.0 ([9057138](https://github.com/lalu-uk/Propsy/commit/9057138de9d2d9c2d7b09e63179b55c3abc9a4ff))
+* **deps:** update module google.golang.org/api to v0.309.0 ([6089104](https://github.com/lalu-uk/Propsy/commit/60891049aace7db0f017295664426eb1d1bec7eb))
+* **deps:** update module google.golang.org/api to v0.309.0 ([806cd77](https://github.com/lalu-uk/Propsy/commit/806cd772472bd7b31614751039badbcb94820cc7))
+* **deps:** update module google.golang.org/grpc to v1.85.0 ([a6631c6](https://github.com/lalu-uk/Propsy/commit/a6631c69a2f338a783ba71a9fb7bd7106517e394))
+* **deps:** update module google.golang.org/grpc to v1.85.0 ([05ae0a8](https://github.com/lalu-uk/Propsy/commit/05ae0a83f87a058c35d417e9b06da4008dfa1134))
+* **gitignore:** anchor the root binary rule ([f2f8838](https://github.com/lalu-uk/Propsy/commit/f2f88389ad383bdf9ee36f1713b5c6014cd39964))
+* **release:** correct docker image repository path to lalu-uk/Propsy ([7cc66a7](https://github.com/lalu-uk/Propsy/commit/7cc66a739c878a8a9f9cb6de0e0ea7e1b9f514c3))
+* **release:** correct docker image repository path to lalu-uk/Propsy ([9133e6f](https://github.com/lalu-uk/Propsy/commit/9133e6f568ca25a86494ffd010a734290690d873))
+* **release:** generate SBOMs for the release binaries ([daeb719](https://github.com/lalu-uk/Propsy/commit/daeb719c3934e5f333282e3b559df4d36b957748))
+* **release:** lowercase docker image repository path ([fc75b04](https://github.com/lalu-uk/Propsy/commit/fc75b047a411c4986d5263e185a698ef0089e504))
+* **release:** tag images with the exact version only ([1093265](https://github.com/lalu-uk/Propsy/commit/10932655cad77914141a69f58589d289228bc721))
+* **release:** verify CI for tagged commit ([657c6ad](https://github.com/lalu-uk/Propsy/commit/657c6ada34bd1ed2d51f6025b826478ebff4926c))
+
 ## [2.1.0](https://github.com/lalu-uk/Propsy/compare/v2.0.0...v2.1.0) (2026-10-28)
 
 
