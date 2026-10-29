@@ -35,8 +35,12 @@ func normalize(t *testing.T, path string) string {
 // /dropsy command, so the two copies can't silently drift apart.
 func TestDropsyManifestsMatchBase(t *testing.T) {
 	for _, mode := range []string{"socket", "http"} {
-		base := "manifest." + mode + ".yaml"
-		variant := "manifest." + mode + ".dropsy.yaml"
+		ext := ".yaml"
+		if mode == "http" {
+			ext = ".yaml.tftpl" // template
+		}
+		base := "manifest." + mode + ext
+		variant := "manifest." + mode + ".dropsy" + ext
 
 		if b, _ := os.ReadFile(base); strings.Contains(string(b), "dropsy") { //nolint:gosec // fixed repo paths
 			t.Errorf("%s must not mention dropsy: it's opt-in", base)
