@@ -26,6 +26,7 @@ oauth_config:
     bot:
       - commands
       - chat:write # only used if PROPSY_ANNOUNCE_CHANNEL is set; then /invite the bot to that channel
+      - im:write # DMs to people who receive a kudos
 settings:
   event_subscriptions:
     request_url: ${service_url}/slack/events
