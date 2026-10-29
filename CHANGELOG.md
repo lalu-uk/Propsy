@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.1.0](https://github.com/lalu-uk/Propsy/compare/v4.0.0...v4.1.0) (2026-10-29)
+
+
+### Features
+
+* **handler:** give a count per person, and show remaining allowance in the form ([97d6949](https://github.com/lalu-uk/Propsy/commit/97d6949dde254eb35c215a1497bf9727b6ccf845))
+
 ## [4.0.0](https://github.com/lalu-uk/Propsy/compare/v3.0.0...v4.0.0) (2026-10-29)
 
 
