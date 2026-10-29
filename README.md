@@ -143,7 +143,7 @@ gcloud run deploy propsy --image=ghcr.io/lalu-uk/propsy:v3.0.0 --region=<region>
 Deployment steps are tracked in `PLAN.md` §6.
 
 To keep it free: use the project's `(default)` Firestore database (named databases get no
-free quota), deploy with `--min-instances=0 --max-instances=2` so a flood of requests can't
+free quota), deploy with `--min-instances=0 --max-instances=1` so a flood of requests can't
 scale up a bill, and set a billing budget alert. Budgets only alert; they don't stop spend.
 
 ## Contributing
