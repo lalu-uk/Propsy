@@ -304,3 +304,6 @@ func (s *JSONFile) Recent(_ context.Context, userID string, limit int) ([]Action
 
 // Close implements Repository. Every write is already on disk.
 func (s *JSONFile) Close() error { return nil }
+
+// Ping implements Repository. The file is in memory, so there's nothing to reach.
+func (s *JSONFile) Ping(context.Context) error { return nil }

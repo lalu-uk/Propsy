@@ -26,7 +26,7 @@ branches once; everything below is shared.
 | Mode | `ENVIRONMENT` | Transport | Storage |
 |---|---|---|---|
 | **A: Socket** | `local` (default) | Slack Socket Mode (outbound WebSocket) | JSON file |
-| **B: Webhook** | `gcp` | HTTP, signature-verified (`/slack/commands`, `/slack/events`, `/slack/interactions`, `/healthz`) | Firestore |
+| **B: Webhook** | `gcp` | HTTP, signature-verified (`/slack/commands`, `/slack/events`, `/slack/interactions`; probes `/healthz` = liveness, `/readyz` = readiness, which pings Firestore) | Firestore |
 
 Packages: `internal/config` (env), `internal/store` (`Repository` + JSON file + Firestore),
 `internal/handler` (transport-agnostic logic + Block Kit), `internal/socket`,

@@ -195,3 +195,12 @@ func TestFormSubmissionOverInteractions(t *testing.T) {
 		t.Errorf("propsies received = %d, want 1", st.PropsiesReceived)
 	}
 }
+
+func TestReadyz(t *testing.T) {
+	s, _, _ := newTestServer(t)
+	rec := httptest.NewRecorder()
+	s.Routes().ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/readyz", nil))
+	if rec.Code != http.StatusOK {
+		t.Errorf("readyz status = %d, want 200", rec.Code)
+	}
+}

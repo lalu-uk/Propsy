@@ -93,6 +93,9 @@ type Repository interface {
 	// Recent returns up to limit propsies and dropsies received by userID,
 	// newest first.
 	Recent(ctx context.Context, userID string, limit int) ([]Action, error)
+	// Ping checks the store can be reached, for the readiness probe. It must be
+	// cheap: it runs on every probe.
+	Ping(ctx context.Context) error
 	Close() error
 }
 

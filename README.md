@@ -137,9 +137,16 @@ version: there's no `latest`):
 
 <!-- x-release-please-start-version -->
 ```sh
-gcloud run deploy propsy --image=ghcr.io/lalu-uk/propsy:v3.0.0 --region=<region> ...
+gcloud run deploy propsy --image=ghcr.io/lalu-uk/propsy:v3.0.0 --region=<region> ... \
+  --startup-probe=httpGet.path=/healthz,httpGet.port=8080,periodSeconds=5,failureThreshold=12,timeoutSeconds=3 \
+  --liveness-probe=httpGet.path=/healthz,httpGet.port=8080,periodSeconds=15,failureThreshold=3,timeoutSeconds=5 \
+  --readiness-probe=httpGet.path=/readyz,httpGet.port=8080,periodSeconds=30,failureThreshold=2,timeoutSeconds=3
 ```
 <!-- x-release-please-end -->
+
+The probes: `/healthz` is liveness (a plain 200, so a slow dependency can't restart a healthy
+instance) and `/readyz` checks Firestore. A failing readiness probe stops traffic to the instance
+without restarting it. Readiness probes are still Preview in Cloud Run.
 
 The HTTP manifests are templates: `${service_url}` stands for the Cloud Run service URL. Replace it with your URL by hand, or with any templating tool.
 
