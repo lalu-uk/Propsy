@@ -293,3 +293,14 @@ func (f *Firestore) Recent(ctx context.Context, userID string, limit int) ([]Act
 
 // Close implements Repository.
 func (f *Firestore) Close() error { return f.client.Close() }
+
+// Ping reads one document, so a readiness probe exercises the same path as a
+// request. A missing document is fine: only a failure to reach Firestore is an
+// error.
+func (f *Firestore) Ping(ctx context.Context) error {
+	_, err := f.client.Collection(f.c.boards).Doc(boardsDoc).Get(ctx)
+	if err != nil && status.Code(err) != codes.NotFound {
+		return fmt.Errorf("firestore ping: %w", err)
+	}
+	return nil
+}

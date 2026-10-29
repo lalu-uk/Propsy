@@ -9,11 +9,13 @@ package webhook
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"io"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/laluowen/Propsy/internal/handler"
 	"github.com/slack-go/slack"
@@ -38,10 +40,26 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("/slack/commands", s.handleCommand)
 	mux.HandleFunc("/slack/events", s.handleEvent)
 	mux.HandleFunc("/slack/interactions", s.handleInteraction)
+	// /healthz is liveness: it only says the process is up, so a slow dependency
+	// can't get a healthy instance restarted. /readyz checks the store, and Cloud
+	// Run stops routing to the instance while it fails, without restarting it.
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
+	mux.HandleFunc("/readyz", s.handleReady)
 	return mux
+}
+
+// handleReady reports 503 while the store can't be reached.
+func (s *Server) handleReady(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
+	defer cancel()
+	if err := s.handler.Ready(ctx); err != nil {
+		s.log.Printf("readiness: %v", err)
+		http.Error(w, "not ready", http.StatusServiceUnavailable)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
 }
 
 // handleCommand processes `/propsy @someone ...`.

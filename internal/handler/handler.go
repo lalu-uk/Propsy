@@ -194,6 +194,12 @@ func (h *Handler) announce(ctx context.Context, cmd slack.SlashCommand, to []str
 	})
 }
 
+// Ready reports whether the app can serve requests: the store is reachable.
+// It backs the readiness probe, not liveness.
+func (h *Handler) Ready(ctx context.Context) error {
+	return h.Store.Ping(ctx)
+}
+
 // PublishHome renders and publishes the app home dashboard for userID. It's
 // called when they open the Home tab.
 func (h *Handler) PublishHome(ctx context.Context, userID string) error {

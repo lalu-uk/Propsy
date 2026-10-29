@@ -15,6 +15,9 @@ import (
 //
 //nolint:gocyclo // one long linear script of assertions; splitting it would only obscure the data flow
 func testRepository(t *testing.T, r Repository, uniq string) {
+	if err := r.Ping(context.Background()); err != nil {
+		t.Errorf("Ping on a reachable store: %v", err)
+	}
 	t.Helper()
 	ctx := context.Background()
 	a, b, c := uniq+"A", uniq+"B", uniq+"C"
