@@ -26,6 +26,10 @@ func cli(args []string, stdout, stderr io.Writer) int {
 	if len(args) == 0 {
 		return -1
 	}
+	if len(args) > 1 {
+		_, _ = fmt.Fprintf(stderr, "propsy: unexpected argument %q\n\n%s", args[1], usageText)
+		return 2
+	}
 	switch args[0] {
 	case "-h", "--help", "help":
 		_, _ = fmt.Fprint(stdout, usageText)
