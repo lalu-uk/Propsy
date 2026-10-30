@@ -31,12 +31,12 @@ func assertContains(t *testing.T, out string, wants ...string) {
 }
 
 func TestPluralNouns(t *testing.T) {
-	for n, want := range map[int]string{0: "0 propsies", 1: "1 propsy", 2: "2 propsies", 10: "10 propsies"} {
+	for n, want := range map[int]string{0: "0 Propsies", 1: "1 Propsy", 2: "2 Propsies", 10: "10 Propsies"} {
 		if got := propsies(n); got != want {
 			t.Errorf("propsies(%d) = %q, want %q", n, got, want)
 		}
 	}
-	for n, want := range map[int]string{0: "0 dropsies", 1: "1 dropsy", 5: "5 dropsies"} {
+	for n, want := range map[int]string{0: "0 Dropsies", 1: "1 Dropsy", 5: "5 Dropsies"} {
 		if got := dropsies(n); got != want {
 			t.Errorf("dropsies(%d) = %q, want %q", n, got, want)
 		}
@@ -45,8 +45,8 @@ func TestPluralNouns(t *testing.T) {
 
 func TestHomeBlocksEmpty(t *testing.T) {
 	out := render(t, homeBlocks(store.Stats{}, boards{}, nil, nil))
-	assertContains(t, out, "*Received:* 0 propsies", "*Given:* 0 propsies", "No propsies yet")
-	for _, unwanted := range []string{"dropsies", "Recently received", "available"} {
+	assertContains(t, out, "*Received:* 0 Propsies", "*Given:* 0 Propsies", "No Propsies yet")
+	for _, unwanted := range []string{"Dropsies", "Recently received", "available"} {
 		if strings.Contains(out, unwanted) {
 			t.Errorf("%q should be hidden when empty/unlimited: %s", unwanted, out)
 		}
@@ -64,23 +64,23 @@ func TestHomeBlocksPopulated(t *testing.T) {
 	q := &quota{used: 190, limit: 200, period: 30 * 24 * time.Hour, resetsAt: resets, perPerson: 5, perPersonPeriod: 24 * time.Hour}
 	out := render(t, homeBlocks(stats, boards{received: board, given: []store.Entry{{UserID: "UB", Count: 7}}}, recent, q))
 	assertContains(t, out,
-		"*Received:* 5 propsies, 10 dropsies", "*Given:* 3 propsies, 1 dropsy",
+		"*Received:* 5 Propsies, 10 Dropsies", "*Given:* 3 Propsies, 1 Dropsy",
 		"Leaderboard: received", ":first_place_medal: <@UA> — 5", ":third_place_medal: <@UC> — 3", "4. <@UD> — 1",
 		"Leaderboard: given", ":first_place_medal: <@UB> — 7",
-		"Recently received", "<@UB> gave you a propsy: thanks", ":droplet: <@UC> gave you a dropsy: lol",
-		"You have *10* propsies/dropsies available, resetting to 200 <!date^1700000000^{date_short_pretty} at {time}|2023-11-14 22:13 UTC>.",
+		"Recently received", "<@UB> gave you a Propsy: thanks", ":droplet: <@UC> gave you a Dropsy: lol",
+		"You have *10* Propsies/Dropsies available, resetting to 200 <!date^1700000000^{date_short_pretty} at {time}|2023-11-14 22:13 UTC>.",
 		"You can give any one person up to 5 per 1d",
 	)
 }
 
 func TestSingularNounsOnHome(t *testing.T) {
 	out := render(t, homeBlocks(store.Stats{PropsiesReceived: 1, DropsiesReceived: 1, PropsiesGiven: 1}, boards{}, nil, nil))
-	assertContains(t, out, "*Received:* 1 propsy, 1 dropsy", "*Given:* 1 propsy")
+	assertContains(t, out, "*Received:* 1 Propsy, 1 Dropsy", "*Given:* 1 Propsy")
 }
 
 func TestQuotaNeverShowsNegative(t *testing.T) {
 	out := render(t, homeBlocks(store.Stats{}, boards{}, nil, &quota{used: 205, limit: 200, period: 24 * time.Hour, resetsAt: time.Unix(1700000000, 0)}))
-	assertContains(t, out, "*0* propsies/dropsies available, resetting to 200")
+	assertContains(t, out, "*0* Propsies/Dropsies available, resetting to 200")
 }
 
 func TestQuotaWithOnlyPerPersonLimit(t *testing.T) {
@@ -93,12 +93,12 @@ func TestQuotaWithOnlyPerPersonLimit(t *testing.T) {
 
 func TestAnnouncementBlocks(t *testing.T) {
 	out := render(t, announcementBlocks("UA", []string{"UB", "UC"}, "line1\nline2", 1, 1))
-	assertContains(t, out, ":raised_hands: <@UA> gave a propsy to <@UB>, <@UC>", ">line1\\n>line2")
+	assertContains(t, out, ":raised_hands: <@UA> gave a Propsy to <@UB>, <@UC>", ">line1\\n>line2")
 	if strings.Contains(render(t, announcementBlocks("UA", []string{"UB"}, "", 1, 1)), `\n>`) {
 		t.Error("no quote expected without a reason")
 	}
 	assertContains(t, render(t, announcementBlocks("UA", []string{"UB"}, "menace", -1, 1)),
-		":droplet: <@UA> gave a dropsy to <@UB>", ">menace")
+		":droplet: <@UA> gave a Dropsy to <@UB>", ">menace")
 }
 
 const hashKudos = "#kudos"
@@ -125,7 +125,7 @@ func TestFormatPeriod(t *testing.T) {
 
 func TestQuotaBeforeFirstUse(t *testing.T) {
 	out := render(t, homeBlocks(store.Stats{}, boards{}, nil, &quota{limit: 200, period: 30 * 24 * time.Hour}))
-	assertContains(t, out, "*200* propsies/dropsies available (it resets 30d after you first use one).")
+	assertContains(t, out, "*200* Propsies/Dropsies available (it resets 30d after you first use one).")
 }
 
 func TestLimitMessages(t *testing.T) {
@@ -140,22 +140,22 @@ func TestLimitMessages(t *testing.T) {
 		{
 			"none left", &store.LimitError{Kind: store.LimitOverall, Limit: 200, Period: time.Hour, ResetsAt: reset},
 			1,
-			[]string{"used all 200 of your propsies/dropsies", "Your allowance resets " + slackReset},
+			[]string{"used all 200 of your Propsies/Dropsies", "Your allowance resets " + slackReset},
 		},
 		{
 			"some left", &store.LimitError{Kind: store.LimitOverall, Limit: 200, Left: 2, ResetsAt: reset},
 			3,
-			[]string{"That takes 3, but you only have 2 propsies/dropsies left", "resets"},
+			[]string{"That takes 3, but you only have 2 Propsies/Dropsies left", "resets"},
 		},
 		{
 			"too many for an unopened window", &store.LimitError{Kind: store.LimitOverall, Limit: 2, Left: 2},
 			3,
-			[]string{"only have 2 propsies/dropsies left."},
+			[]string{"only have 2 Propsies/Dropsies left."},
 		},
 		{
 			"per person", &store.LimitError{Kind: store.LimitPerPerson, Limit: 5, Period: 24 * time.Hour, Capped: []store.Capped{{UserID: "UB", ResetsAt: reset}}},
 			1,
-			[]string{"per-person limit (5 propsies/dropsies per 1d)", "<@UB> (resets " + slackReset + ")"},
+			[]string{"per-person limit (5 Propsies/Dropsies per 1d)", "<@UB> (resets " + slackReset + ")"},
 		},
 	}
 	for _, tt := range tests {
@@ -192,7 +192,7 @@ func TestBoardTiesShareARank(t *testing.T) {
 
 func TestEmptyBoards(t *testing.T) {
 	assertContains(t, render(t, homeBlocks(store.Stats{}, boards{}, nil, nil)),
-		"No propsies yet", "Nobody has given anything yet")
+		"No Propsies yet", "Nobody has given anything yet")
 }
 
 // A big workspace must be listed in full, split over sections that each fit
@@ -228,4 +228,22 @@ func TestBoardSaysWhenItWasCut(t *testing.T) {
 	if strings.Contains(render(t, boardBlocks("T", entries, "none", 0)), "Showing the top") {
 		t.Error("a complete board must not claim to be cut")
 	}
+}
+
+func TestRecentGroupsABatchIntoOneLine(t *testing.T) {
+	const reason = "shipping"
+	at := time.Unix(1700000000, 0)
+	rows := []store.Action{
+		{From: "UA", Delta: 1, Reason: reason, CreatedAt: at},
+		{From: "UA", Delta: 1, Reason: reason, CreatedAt: at},
+		{From: "UA", Delta: 1, Reason: reason, CreatedAt: at},
+		{From: "UB", Delta: 1, Reason: "", CreatedAt: at.Add(-time.Hour)},
+	}
+	got := groupRecent(rows, 5)
+	if len(got) != 2 || got[0].count != 3 || got[1].count != 1 {
+		t.Fatalf("groups = %+v, want a batch of 3 then a single", got)
+	}
+	out := render(t, homeBlocks(store.Stats{}, boards{}, rows, nil))
+	assertContains(t, out, "gave you 3 Propsies: "+reason)
+	assertContains(t, out, "gave you a Propsy")
 }

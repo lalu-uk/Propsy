@@ -23,11 +23,11 @@ const sqliteMagic = "SQLite format 3\x00"
 
 // JSONFile is a Repository for local (single-process) use. It keeps
 // everything in memory and mirrors the Firestore layout: a record per user (counters, the
-// giver's overall rate-limit window, per-person windows and the propsies and
-// dropsies received) and one pair of leaderboards. Every AddActions saves the
+// giver's overall rate-limit window, per-person windows and the Propsies and
+// Dropsies received) and one pair of leaderboards. Every AddActions saves the
 // whole thing by writing a temp file, syncing it and renaming it over the old
 // one, so a crash never leaves a partial file. That rewrite is fine at this
-// app's scale (roughly 1.5 MB at 10,000 propsies).
+// app's scale (roughly 1.5 MB at 10,000 Propsies).
 //
 // It is safe for concurrent use within one process, but two processes must not
 // share a file: the last writer would win.
@@ -58,7 +58,7 @@ type user struct {
 // boards mirrors Firestore's boards/all document.
 type boards struct {
 	Received map[string]int `json:"received"` // user ID -> score
-	Given    map[string]int `json:"given"`    // user ID -> propsies and dropsies given
+	Given    map[string]int `json:"given"`    // user ID -> Propsies and Dropsies given
 }
 
 // NewJSONFile opens the store at path, creating it on the first write. An empty

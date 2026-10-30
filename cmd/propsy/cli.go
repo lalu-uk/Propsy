@@ -8,9 +8,9 @@ import (
 const usageText = `Propsy is a self-hosted kudos bot for Slack: /propsy gives one, /dropsy takes one away.
 
 Usage:
-  propsy              run the bot (configured by environment variables)
-  propsy --help       show this help
-  propsy --version    show the version
+  Propsy              run the bot (configured by environment variables)
+  Propsy --help       show this help
+  Propsy --version    show the version
 
 The mode comes from ENVIRONMENT:
   local (default)  Socket Mode, data in a JSON file (DB_PATH). Needs SLACK_BOT_TOKEN, SLACK_APP_TOKEN.
@@ -35,7 +35,7 @@ func cli(args []string, stdout, stderr io.Writer) int {
 		_, _ = fmt.Fprint(stdout, usageText)
 		return 0
 	case "-v", "--version", "version":
-		_, _ = fmt.Fprintf(stdout, "propsy %s\n", version)
+		_, _ = fmt.Fprintf(stdout, "Propsy %s\n", version)
 		return 0
 	default:
 		_, _ = fmt.Fprintf(stderr, "propsy: unknown argument %q\n\n%s", args[0], usageText)

@@ -6,12 +6,12 @@
 
 Self-hosted, scale-to-zero **kudos for Slack**, as a single static Go binary.
 
-- `/propsy @alice @bob for unblocking the release` gives each of them a propsy. You get a private confirmation, and each of them gets a DM. Nothing is posted publicly unless `PROPSY_ANNOUNCE_CHANNEL` is set.
+- `/propsy @alice @bob for unblocking the release` gives each of them a Propsy. You get a private confirmation, and each of them gets a DM. Nothing is posted publicly unless `PROPSY_ANNOUNCE_CHANNEL` is set.
 - `/propsy 5 @alice for unblocking the release` gives Alice five. The optional leading number is
   the count for each person, from 1 to 5 (the default is 1), and each one counts against the limits.
 - `/propsy` on its own opens a form to pick people, how many each (1 to 5, default 1), and a
   reason. Once people are picked, it shows how much of each person's per-person allowance is left.
-- The app's **Home** tab shows your propsy and dropsy totals, how many you have left to give, two
+- The app's **Home** tab shows your Propsy and Dropsy totals, how many you have left to give, two
   leaderboards (received, and given), and what you've recently received.
 
 | Mode | `ENVIRONMENT` | Transport | Storage | Suited to |
@@ -74,7 +74,7 @@ There is no `latest` tag: always use an exact version. To check what you've down
 
 | Variable | Default | |
 |---|---|---|
-| `PROPSY_LIMIT` | `200` | Most propsies + dropsies one person can give per window. `0` = unlimited. |
+| `PROPSY_LIMIT` | `200` | Most Propsies + Dropsies one person can give per window. `0` = unlimited. |
 | `PROPSY_LIMIT_PERIOD` | `30d` | Window length: it starts when someone first gives one, and the allowance resets in full once it has elapsed. Units `s`, `m`, `h`, `d`, `w`, combinable: `30s`, `24h`, `2w`, `1d12h`. |
 | `PROPSY_PER_PERSON_LIMIT` | `5` | Most one person can give any single other person per window. `0` = unlimited. |
 | `PROPSY_PER_PERSON_LIMIT_PERIOD` | `1d` | Window length for the per-person limit, same rules. |
@@ -83,18 +83,18 @@ There is no `latest` tag: always use an exact version. To check what you've down
 | `PROPSY_ANNOUNCE_CHANNEL` | _(unset)_ | Post each announcement in this channel (opt-in: nothing is public by default). Channel ID recommended (`C0123ABCDEF`); `#name` works for public channels. Invite the bot first. |
 
 Allowances reset in full once the period has elapsed, not gradually: your window opens when
-you first give a propsy or dropsy, and 30 days later (by default) you're back to 200. The
+you first give a Propsy or Dropsy, and 30 days later (by default) you're back to 200. The
 rest (tokens, DB, GCP) are in [`.env.example`](./.env.example). Everyone can see their
 remaining allowance and when it resets in the Home tab, or by running `/propsy` with no
 arguments.
 
 ## /dropsy (optional)
 
-`/dropsy @someone for that thing you did` gives a dropsy, which takes a propsy away (a leading
+`/dropsy @someone for that thing you did` gives a Dropsy, which takes a Propsy away (a leading
 count works here too). It counts
-against the giver's limits like a propsy does, and the Home tab shows both totals
-(`Received: 5 propsies, 10 dropsies`). A person's score on the received board is propsies minus
-dropsies, and negative scores are listed too (at the bottom). It's opt-in because it isn't a
+against the giver's limits like a Propsy does, and the Home tab shows both totals
+(`Received: 5 Propsies, 10 Dropsies`). A person's score on the received board is Propsies minus
+Dropsies, and negative scores are listed too (at the bottom). It's opt-in because it isn't a
 friendly pattern for every team: use `slack/manifest.socket.dropsy.yaml` /
 `slack/manifest.http.dropsy.yaml.tftpl` instead of the default manifests to enable it. Without
 that command in the Slack app, nothing else changes.
@@ -103,10 +103,10 @@ that command in the Slack app, nothing else changes.
 
 The Home tab has two boards, and by default they list **everyone**:
 
-- **Received:** everyone who has received a propsy or dropsy, ranked by score (propsies minus
-  dropsies received), including zero and negative scores.
-- **Given:** everyone who has given a propsy or dropsy, ranked by how many they've given in total
-  (propsies and dropsies both count).
+- **Received:** everyone who has received a Propsy or Dropsy, ranked by score (Propsies minus
+  Dropsies received), including zero and negative scores.
+- **Given:** everyone who has given a Propsy or Dropsy, ranked by how many they've given in total
+  (Propsies and Dropsies both count).
 
 Equal counts share a rank. Set `PROPSY_LEADERBOARD_MAX_USERS` to show only the top N of each
 board (a board that was cut says "Showing the top N."). There's a hard maximum of 1000 rows per

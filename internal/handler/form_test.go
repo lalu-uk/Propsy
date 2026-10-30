@@ -64,7 +64,7 @@ func TestDropsyFormHasItsOwnTitleAndHint(t *testing.T) {
 	cmd := dropsy("UA", "")
 	cmd.TriggerID = testTrigger
 	_ = h.HandleSlashCommand(context.Background(), cmd)
-	if got := fs.opened[0].view.Title.Text; got != "Give a dropsy" {
+	if got := fs.opened[0].view.Title.Text; got != "Give a Dropsy" {
 		t.Errorf("title = %q", got)
 	}
 	reason := fs.opened[0].view.Blocks.BlockSet[2].(*slack.InputBlock)
@@ -96,9 +96,9 @@ func TestFormSubmissionDropsyAndSelfSkipped(t *testing.T) {
 		t.Fatalf("HandleViewSubmission: %v", err)
 	}
 	if st, _ := repo.Stats(ctx, "UA"); st.DropsiesReceived != 1 || st.PropsiesReceived != 0 {
-		t.Errorf("UA stats = %+v, want one dropsy", st)
+		t.Errorf("UA stats = %+v, want one Dropsy", st)
 	}
-	if got := fs.lastResponse(t).Text; !strings.Contains(got, "dropsy") && !strings.Contains(got, "Dropsy") {
+	if got := fs.lastResponse(t).Text; !strings.Contains(got, "Dropsy") {
 		t.Errorf("announcement = %q", got)
 	}
 }
@@ -151,7 +151,7 @@ func TestCountTokenGivesEachRecipientThatMany(t *testing.T) {
 			t.Errorf("%s received %d, want 3", u, st.PropsiesReceived)
 		}
 	}
-	if got := fs.lastResponse(t).Text; !strings.Contains(got, "3 propsies") || !strings.Contains(got, "all the things") {
+	if got := fs.lastResponse(t).Text; !strings.Contains(got, "3 Propsies") || !strings.Contains(got, "all the things") {
 		t.Errorf("announcement = %q", got)
 	}
 }

@@ -2,17 +2,17 @@
 
 ## 1. What it is
 
-A single static Go binary: a Slack bot for giving kudos, called **propsies** (singular:
-*propsy*), and, opt-in, taking them away with **dropsies** (singular: *dropsy*). The
-vocabulary is fixed: "1 propsy", "5 propsies", "1 dropsy", "5 dropsies", everywhere.
+A single static Go binary: a Slack bot for giving kudos, called **Propsies** (singular:
+*Propsy*), and, opt-in, taking them away with **Dropsies** (singular: *Dropsy*). The
+vocabulary is fixed: "1 Propsy", "5 Propsies", "1 Dropsy", "5 Dropsies", everywhere.
 
 - `/propsy @alice @bob for unblocking the release` → private confirmation to the giver; a DM to each recipient; public only if an announce channel is configured.
-  Each recipient gets a propsy.
-- **App Home** dashboard: your totals (`Received: 5 propsies, 10 dropsies` /
-  `Given: 3 propsies, 5 dropsies`; dropsies are hidden while zero), your remaining allowance,
+  Each recipient gets a Propsy.
+- **App Home** dashboard: your totals (`Received: 5 Propsies, 10 Dropsies` /
+  `Given: 3 Propsies, 5 Dropsies`; Dropsies are hidden while zero), your remaining allowance,
   two all-time **leaderboards** that list everyone (no top-N): *received* (everyone who has
-  received a propsy or dropsy, by score = propsies − dropsies, negatives included) and
-  *given* (everyone who has given a propsy or dropsy, by how many in total), and what you've recently
+  received a Propsy or Dropsy, by score = Propsies − Dropsies, negatives included) and
+  *given* (everyone who has given a Propsy or Dropsy, by how many in total), and what you've recently
   received.
 
 Deliberately small. Non-goals for the MVP: multi-workspace/OAuth install, time-windowed
@@ -45,7 +45,7 @@ Single-workspace by design (bot token from env) — self-hosted per workspace.
   `response_url`, so the submission (`view_submission` via interactivity: `/slack/interactions`
   over HTTP, or the socket) replies the same way a command does. Interactivity is on in both
   manifests; the HTTP one needs its `request_url` set to the service.
-- Counts: a leading whole number (1 to 5, default 1) is how many propsies to give each person,
+- Counts: a leading whole number (1 to 5, default 1) is how many Propsies to give each person,
   stored as N action rows so each counts against the limits. A leading number is always the
   count; the form's count field does the same, with no default.
 - The form refreshes on a people selection (`block_actions` → `views.update`), showing each
@@ -59,7 +59,7 @@ Single-workspace by design (bot token from env) — self-hosted per workspace.
   errors. Nothing is posted publicly by default. Unlike `chat.postMessage`, it works in channels
   the bot hasn't been invited to.
 - **Receivers** get a DM (`chat.postMessage` with the receiver's user ID as the channel, which
-  needs `im:write`), one per person per batch, for propsies and dropsies alike. DMs are sent
+  needs `im:write`), one per person per batch, for Propsies and Dropsies alike. DMs are sent
   after the response is written (`Followup`, run inside the same request in webhook mode), so
   they stay off the 3 s ack path. A failed DM is logged and doesn't affect the give.
 - **Announce channel** (`PROPSY_ANNOUNCE_CHANNEL`, optional, opt-in): the public announcement goes
@@ -74,7 +74,7 @@ Single-workspace by design (bot token from env) — self-hosted per workspace.
 
 ### Rules
 
-- Can't give yourself a propsy or dropsy (self-mentions in a multi-person command are skipped).
+- Can't give yourself a Propsy or Dropsy (self-mentions in a multi-person command are skipped).
 - ≤10 recipients per command; reason ≤500 chars; duplicate mentions collapsed.
 - **Overall limit:** `PROPSY_LIMIT` (default 200, 0 = off) per `PROPSY_LIMIT_PERIOD`
   (default `30d`; human-friendly `s/m/h/d/w`).
@@ -87,11 +87,11 @@ Single-workspace by design (bot token from env) — self-hosted per workspace.
   work the same way per (giver, recipient). The reset time is shown wherever the allowance
   is. Chosen over global calendar-style boundaries because a 30d period has no natural
   calendar edge, and "resets 30 days after you first use it" is easy to explain.
-- Both limits count propsies and dropsies together, and a command that would exceed a
+- Both limits count Propsies and Dropsies together, and a command that would exceed a
   limit is rejected whole. Enforcement is atomic: the windows are read and updated in the
   same transaction as the action.
 - Limits are meant to be visible: the Home tab and `/propsy` with no arguments both show
-  the remaining allowance and when it resets ("You have 190 propsies/dropsies available,
+  the remaining allowance and when it resets ("You have 190 Propsies/Dropsies available,
   resetting to 200 Nov 14 at 3:04 PM").
 
 ### /dropsy (opt-in)
@@ -99,11 +99,11 @@ Single-workspace by design (bot token from env) — self-hosted per workspace.
 `/dropsy @user [reason]` records a `Delta: -1` action. It's routed by `cmd.Command`, so it
 only exists if the Slack app has the command: the `*.dropsy.yaml` manifests add it, the
 default ones don't (no server-side flag; the manifest is the single opt-in). Semantics:
-propsies and dropsies are counted separately (received and given); both share the giver's
+Propsies and Dropsies are counted separately (received and given); both share the giver's
 rate limits; the received board ranks by net score and includes anyone who has received one, even at
 zero or below; Recent shows
-dropsies with a :droplet:. `slack/manifest_test.go`
-guards that each dropsy manifest differs from its base only by the `/dropsy` command.
+Dropsies with a :droplet:. `slack/manifest_test.go`
+guards that each Dropsy manifest differs from its base only by the `/dropsy` command.
 
 ## 3. Storage: Firestore (decision)
 
@@ -147,7 +147,7 @@ received list) and one pair of boards. `AddActions` checks the limits with the s
 `plan()`, builds the new state on a copy of what it touches, saves, and only then swaps it in,
 so a failed save changes nothing. Saving writes a temp file, fsyncs it and renames it over the
 old one, so a crash never leaves a partial file. Rewriting the whole file per give is fine at
-this app's scale (~1.5 MB at 10,000 propsies). Leaderboard ranking (`topEntries`) and the
+this app's scale (~1.5 MB at 10,000 Propsies). Leaderboard ranking (`topEntries`) and the
 stats and window types are shared with Firestore, and the one contract test in
 `store_test.go` runs against the in-memory store, a file-backed one and Firestore.
 
@@ -308,4 +308,4 @@ share a rank. No composite index is needed anywhere.
 4. **Local store → JSON file (done):** replaced SQLite with the `JSONFile` store described in
    §3 ("Local storage").
 5. **Later, if wanted:** time-windowed leaderboards, a message
-   shortcut for giving a propsy, `PROPSY_REQUIRE_REASON`, `LOG_FORMAT=json` for Cloud Logging.
+   shortcut for giving a Propsy, `PROPSY_REQUIRE_REASON`, `LOG_FORMAT=json` for Cloud Logging.

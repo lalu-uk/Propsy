@@ -16,11 +16,11 @@ import (
 //   - users/{id} holds counters (propsiesReceived, dropsiesReceived,
 //     propsiesGiven, dropsiesGiven) plus the giver's overall rate-limit window
 //     (windowStart, windowUsed).
-//   - users/{id}/received/{auto} holds each propsy or dropsy that user received.
+//   - users/{id}/received/{auto} holds each Propsy or Dropsy that user received.
 //   - users/{from}/pairs/{to} holds the per-person rate-limit window
 //     (windowStart, windowUsed) for from giving to.
 //   - boards/all is the leaderboards in one document: `received` maps user ID
-//     to score (propsies minus dropsies received) and `given` maps user ID to
+//     to score (propsies minus Dropsies received) and `given` maps user ID to
 //     how many they've given. Both are bumped with atomic increments inside
 //     AddActions, so reading either whole board is a single document read
 //     however many people are on it. The cost is Firestore's 1 MiB document
@@ -35,7 +35,7 @@ import (
 const boardsDoc = "all"
 
 // collections are the Firestore collection names. Every one carries the
-// configured prefix (PROPSY_DB_PREFIX, default "propsy") so Propsy can share a
+// configured prefix (PROPSY_DB_PREFIX, default "Propsy") so Propsy can share a
 // database with other apps without collisions: propsy_users, propsy_boards, ...
 type collections struct {
 	users, received, pairs, boards string

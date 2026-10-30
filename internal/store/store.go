@@ -1,4 +1,4 @@
-// Package store defines the persistence boundary for propsies and dropsies and
+// Package store defines the persistence boundary for Propsies and Dropsies and
 // its concrete implementations. The Repository interface decouples the core
 // logic from the backing store (a JSON file locally, Firestore on GCP).
 package store
@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-// Action is one propsy (Delta +1) or one dropsy (Delta -1) from one person to
+// Action is one Propsy (Delta +1) or one Dropsy (Delta -1) from one person to
 // another.
 type Action struct {
 	From      string    `firestore:"from" json:"from"`           // Slack user ID of the giver
@@ -30,7 +30,7 @@ type Stats struct {
 	DropsiesGiven    int `json:"dropsiesGiven"`
 }
 
-// Score is propsies received minus dropsies received; it may be negative.
+// Score is Propsies received minus Dropsies received; it may be negative.
 func (s Stats) Score() int { return s.PropsiesReceived - s.DropsiesReceived }
 
 // ErrBadDelta is returned by AddActions when Action.Delta is not +1 or -1.
@@ -41,12 +41,12 @@ type Board int
 
 // The leaderboards.
 const (
-	// BoardReceived ranks everyone who has received a propsy or dropsy by
-	// score: propsies received minus dropsies received (so it can be zero or
+	// BoardReceived ranks everyone who has received a Propsy or Dropsy by
+	// score: Propsies received minus Dropsies received (so it can be zero or
 	// negative).
 	BoardReceived Board = iota + 1
-	// BoardGiven ranks everyone who has given a propsy or dropsy by how many
-	// they've given in total (propsies and dropsies both count).
+	// BoardGiven ranks everyone who has given a Propsy or Dropsy by how many
+	// they've given in total (propsies and Dropsies both count).
 	BoardGiven
 )
 
@@ -73,7 +73,7 @@ func topEntries(counts map[string]int, limit int) []Entry {
 	return out
 }
 
-// Repository persists propsies and dropsies and serves the aggregates the app
+// Repository persists Propsies and Dropsies and serves the aggregates the app
 // home and rate limits need.
 type Repository interface {
 	// AddActions records actions, all from the same giver, and updates the
@@ -94,7 +94,7 @@ type Repository interface {
 	// ties broken by user ID. Everyone the board covers is eligible: there's no
 	// cut-off but limit.
 	Leaderboard(ctx context.Context, board Board, limit int) ([]Entry, error)
-	// Recent returns up to limit propsies and dropsies received by userID,
+	// Recent returns up to limit Propsies and Dropsies received by userID,
 	// newest first.
 	Recent(ctx context.Context, userID string, limit int) ([]Action, error)
 	// Ping checks the store can be reached, for the readiness probe. It must be
