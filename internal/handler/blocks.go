@@ -175,7 +175,7 @@ const (
 type boards struct {
 	received    []store.Entry // everyone who has received a Propsy or Dropsy, by score
 	receivedCut int
-	given       []store.Entry // everyone who has given one, by how many (propsies + Dropsies)
+	given       []store.Entry // everyone who has given one, by how many (Propsies + Dropsies)
 	givenCut    int
 }
 
@@ -257,7 +257,7 @@ func homeBlocks(stats store.Stats, b boards, recent []store.Action, q *quota) []
 	return blocks
 }
 
-// recentGroup is one give as the recent list shows it: the propsies or dropsies
+// recentGroup is one give as the recent list shows it: the Propsies or Dropsies
 // one giver sent one person in one batch, which the store keeps as one row each.
 type recentGroup struct {
 	store.Action
