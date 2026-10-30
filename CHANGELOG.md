@@ -1,5 +1,18 @@
 # Changelog
 
+## [4.3.0](https://github.com/lalu-uk/Propsy/compare/v4.2.0...v4.3.0) (2026-10-30)
+
+
+### Features
+
+* **home:** show a batch as one line; capitalise Propsy and Dropsy ([20ae96e](https://github.com/lalu-uk/Propsy/commit/20ae96e8ccea8cbe5ab47c3ebcdab2e0b21834dc))
+
+
+### Bug Fixes
+
+* **cli:** lowercase binary name in usage text ([2bd43db](https://github.com/lalu-uk/Propsy/commit/2bd43db4a65b5772a4dbe398a29f94442f6e19b9))
+* **slack:** enable the Messages tab so receiver DMs are delivered ([d43f956](https://github.com/lalu-uk/Propsy/commit/d43f95617e50cbcfa05167c51f7088d635a7f54e))
+
 ## [4.2.0](https://github.com/lalu-uk/Propsy/compare/v4.1.0...v4.2.0) (2026-10-30)
 
 
