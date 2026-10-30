@@ -26,7 +26,7 @@ type Config struct {
 
 	SlackBotToken string // xoxb-..., both modes
 
-	// Rate limits on propsies and dropsies a user can give. Each period is a
+	// Rate limits on Propsies and Dropsies a user can give. Each period is a
 	// fixed window that opens on first use and resets the allowance in full
 	// once it has elapsed (see store.Limits); a limit of 0 means unlimited.
 	// Limit is the overall allowance, PerPersonLimit caps how many one person

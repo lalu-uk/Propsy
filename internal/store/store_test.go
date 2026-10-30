@@ -207,7 +207,7 @@ func testLimits(t *testing.T, r Repository, uniq string) {
 	_ = wantLimit(give(base.Add(4*time.Hour), z), LimitOverall)
 
 	// Once the period has elapsed, everything resets in one go (the window is
-	// fixed from first use, not rolling: the propsies given at +1h and +3h
+	// fixed from first use, not rolling: the Propsies given at +1h and +3h
 	// don't keep counting).
 	reset := base.Add(day)
 	if err := give(reset, x, y); err != nil {
@@ -241,8 +241,8 @@ func testLimits(t *testing.T, r Repository, uniq string) {
 	}
 }
 
-// testBoards: the received board covers everyone who has received a propsy or
-// dropsy (even at a negative score), the given board everyone who has given
+// testBoards: the received board covers everyone who has received a Propsy or
+// Dropsy (even at a negative score), the given board everyone who has given
 // one, and neither is capped except by the limit asked for.
 func testBoards(t *testing.T, r Repository, uniq string) {
 	t.Helper()
@@ -253,8 +253,8 @@ func testBoards(t *testing.T, r Repository, uniq string) {
 	for i, a := range []Action{
 		{From: p, To: q, Delta: 1},
 		{From: p, To: q, Delta: 1},
-		{From: rr, To: q, Delta: -1}, // rr has only ever given a dropsy
-		{From: q, To: s, Delta: -1},  // s is only ever on the receiving end of a dropsy
+		{From: rr, To: q, Delta: -1}, // rr has only ever given a Dropsy
+		{From: q, To: s, Delta: -1},  // s is only ever on the receiving end of a Dropsy
 	} {
 		a.CreatedAt = base.Add(time.Duration(i) * time.Second)
 		if err := r.AddActions(ctx, []Action{a}, Limits{}, a.CreatedAt); err != nil {

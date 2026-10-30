@@ -26,7 +26,7 @@ const (
 )
 
 // formMeta travels in the modal's private_metadata: who is giving, the command
-// it came from (which fixes propsy or dropsy), and where to send replies.
+// it came from (which fixes Propsy or Dropsy), and where to send replies.
 type formMeta struct {
 	UserID      string `json:"user_id"`
 	Command     string `json:"command"`
@@ -57,9 +57,9 @@ func (h *Handler) openForm(ctx context.Context, cmd slack.SlashCommand, delta in
 // block shows the giver's allowance and, once people are picked, how much of
 // the per-person limit each of them has left.
 func (h *Handler) formView(ctx context.Context, meta formMeta, delta int, v formValues) (slack.ModalViewRequest, error) {
-	title, hint := "Give a propsy", "for that thing"
+	title, hint := "Give a Propsy", "for that thing"
 	if delta < 0 {
-		title, hint = "Give a dropsy", "for that thing you did"
+		title, hint = "Give a Dropsy", "for that thing you did"
 	}
 
 	who := slack.NewInputBlock(formBlockUsers, plainText("Who?"), nil,

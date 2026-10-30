@@ -1,5 +1,5 @@
 // Package handler contains the transport-agnostic Propsy logic: giving
-// propsies (/propsy) and dropsies (/dropsy) via slash commands, and publishing
+// Propsies (/propsy) and Dropsies (/dropsy) via slash commands, and publishing
 // the app home dashboard. The same handler serves both Socket Mode and HTTP
 // webhook transports.
 package handler
@@ -50,13 +50,13 @@ func (s Slack) Respond(ctx context.Context, responseURL string, msg *slack.Webho
 
 // Settings are the handler's tunables. A zero limit means unlimited.
 type Settings struct {
-	// Limit caps how many propsies plus dropsies one user may give per
+	// Limit caps how many Propsies plus Dropsies one user may give per
 	// LimitPeriod. The window opens when they first give one and resets in
 	// full once the period has elapsed (see store.Limits).
 	Limit       int
 	LimitPeriod time.Duration
 
-	// PerPersonLimit caps how many propsies plus dropsies one user may give
+	// PerPersonLimit caps how many Propsies plus Dropsies one user may give
 	// one other person per PerPersonLimitPeriod, with the same window rules.
 	PerPersonLimit       int
 	PerPersonLimitPeriod time.Duration
@@ -121,7 +121,7 @@ func (h *Handler) HandleSlashCommand(ctx context.Context, cmd slack.SlashCommand
 }
 
 // DispatchSlashCommand dispatches `/propsy @user [@user …] [reason]` (give a
-// propsy) and `/dropsy @user [@user …] [reason]` (give a dropsy). It does the
+// Propsy) and `/dropsy @user [@user …] [reason]` (give a Dropsy). It does the
 // work that must finish before the response, and returns the follow-up that
 // sends the DMs. With no recipients it opens the give form instead. Any other
 // command name is refused.
@@ -147,7 +147,7 @@ func (h *Handler) DispatchSlashCommand(ctx context.Context, cmd slack.SlashComma
 }
 
 // parseCount reads an optional count from the front of text: a leading whole
-// number is how many propsies or dropsies to give each person, from 1 to
+// number is how many Propsies or Dropsies to give each person, from 1 to
 // maxPerRecipient. Without one the count is 1. A leading number is always the
 // count, so a reason can't start with one.
 func parseCount(text string) (count int, rest string, err error) {
@@ -183,7 +183,7 @@ func commandDelta(command string) (delta int, usage string, ok bool) {
 	return 0, "", false
 }
 
-// give records a propsy (delta 1) or dropsy (delta -1) from cmd.UserID to each
+// give records a Propsy (delta 1) or Dropsy (delta -1) from cmd.UserID to each
 // recipient and announces it. Shared by the slash command and the form.
 func (h *Handler) give(ctx context.Context, cmd slack.SlashCommand, delta int, recipients []string, reason string, count int) (Followup, error) {
 	var others []string
@@ -201,7 +201,7 @@ func (h *Handler) give(ctx context.Context, cmd slack.SlashCommand, delta int, r
 	}
 
 	now := h.Now()
-	// One action row per propsy, so each counts against the limits.
+	// One action row per Propsy, so each counts against the limits.
 	actions := make([]store.Action, 0, len(others)*count)
 	for _, to := range others {
 		for range count {
@@ -271,7 +271,7 @@ func (h *Handler) notifyReceivers(_ context.Context, from string, to []string, r
 	}
 }
 
-// receiptText is the DM a receiver gets, for example "@alice gave you 2 propsies".
+// receiptText is the DM a receiver gets, for example "@alice gave you 2 Propsies".
 func receiptText(from string, delta, count int, reason string) string {
 	emoji := ":raised_hands:"
 	if delta < 0 {
@@ -301,7 +301,9 @@ func (h *Handler) PublishHome(ctx context.Context, userID string) error {
 	if err != nil {
 		return err
 	}
-	recent, err := h.Store.Recent(ctx, userID, recentCount)
+	// Fetch enough rows for recentCount batches: a batch can be up to
+	// maxPerRecipient rows, one per propsy.
+	recent, err := h.Store.Recent(ctx, userID, recentCount*maxPerRecipient)
 	if err != nil {
 		return err
 	}

@@ -1,6 +1,6 @@
 # Propsy — Agent/Developer Notes
 
-Self-hosted kudos bot ("propsies", and opt-in "dropsies") for Slack. One static Go binary, two modes selected by
+Self-hosted kudos bot ("Propsies", and opt-in "Dropsies") for Slack. One static Go binary, two modes selected by
 `ENVIRONMENT`: `local` (Socket Mode + a JSON data file) and `gcp` (HTTP webhooks + Firestore, Cloud
 Run). See `PLAN.md` for design and roadmap.
 
@@ -34,22 +34,22 @@ Run). See `PLAN.md` for design and roadmap.
 - Firestore stores counters + a per-recipient subcollection + one board document so every query uses automatic
   single-field indexes. Don't add queries needing composite indexes without a provisioning story.
 - Replies go via `response_url`, not `chat.postMessage`, so the bot needn't be in the channel.
-- **Vocabulary:** "1 propsy", "5 propsies", "1 dropsy", "5 dropsies" in every user-facing string,
+- **Vocabulary:** "1 Propsy", "5 Propsies", "1 Dropsy", "5 Dropsies" in every user-facing string,
   doc and comment (use `propsies(n)` / `dropsies(n)` in `blocks.go` for counted nouns).
 - Only `/propsy` and `/dropsy` are answered; any other command name is refused. `/dropsy` is
   `Delta: -1`; it's opt-in purely via the `*.dropsy.yaml` manifests (keep them identical to the
-  base ones apart from that command: `slack/manifest_test.go` enforces it). Propsies and dropsies
-  are counted separately; leaderboard score = propsies − dropsies received.
+  base ones apart from that command: `slack/manifest_test.go` enforces it). Propsies and Dropsies
+  are counted separately; leaderboard score = Propsies − Dropsies received.
 - Rate limits (`PROPSY_LIMIT[_PERIOD]`, `PROPSY_PER_PERSON_LIMIT[_PERIOD]`; periods parsed by
   `config.ParseDuration`, which adds `d`/`w`) are **fixed windows that reset in full**: a window
   opens on first use and the allowance is back to the limit once the period has elapsed. They're
   enforced atomically inside `Repository.AddActions` (which returns `*store.LimitError`), with the
-  window maths in `store/limits.go` (`plan`), shared by both stores. Propsies and dropsies share
+  window maths in `store/limits.go` (`plan`), shared by both stores. Propsies and Dropsies share
   them. They must stay user-visible, with the reset time (Home tab, `/propsy` usage).
 - Two leaderboards, both listing *everyone* they cover (by default; `PROPSY_LEADERBOARD_MAX_USERS` sets a top-N,
   and the hard maximum `config.MaxLeaderboardUsers` = 1000 always guards Slack's block limit:
-  config clamps larger values and returns a `Config.Warnings` entry that `main` logs): received (score = propsies − dropsies, scores ≤ 0 included) and given (propsies
-  + dropsies both count). In Firestore both boards live in one document, `boards/all`, updated
+  config clamps larger values and returns a `Config.Warnings` entry that `main` logs): received (score = Propsies − Dropsies, scores ≤ 0 included) and given (propsies
+  + Dropsies both count). In Firestore both boards live in one document, `boards/all`, updated
   with atomic nested-map increments in `AddActions` (1 read per board fetch regardless of headcount;
   the 1 MiB document limit means ~15k users, an accepted ceiling).
 - Home tabs are only built when opened (`app_home_opened`), never refreshed after a command: that

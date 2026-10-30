@@ -27,10 +27,10 @@ func mentions(ids []string) string {
 	return strings.Join(parts, ", ")
 }
 
-// propsies and dropsies render a count with the right noun: "1 propsy",
-// "5 propsies", "0 dropsies".
-func propsies(n int) string { return counted(n, "propsy", "propsies") }
-func dropsies(n int) string { return counted(n, "dropsy", "dropsies") }
+// Propsies and Dropsies render a count with the right noun: "1 Propsy",
+// "5 Propsies", "0 Dropsies".
+func propsies(n int) string { return counted(n, "Propsy", "Propsies") }
+func dropsies(n int) string { return counted(n, "Dropsy", "Dropsies") }
 
 func counted(n int, one, many string) string {
 	if n == 1 {
@@ -51,27 +51,27 @@ func channelRef(ch string) string {
 
 func announcementText(delta int) string {
 	if delta < 0 {
-		return ":droplet: dropsy!"
+		return ":droplet: Dropsy!"
 	}
-	return ":raised_hands: propsy!"
+	return ":raised_hands: Propsy!"
 }
 
-// giftNoun is "a propsy" or "5 dropsies" for the announcement.
+// giftNoun is "a Propsy" or "5 Dropsies" for the announcement.
 func giftNoun(delta, count int) string {
 	if delta < 0 {
 		if count == 1 {
-			return "a dropsy"
+			return "a Dropsy"
 		}
 		return dropsies(count)
 	}
 	if count == 1 {
-		return "a propsy"
+		return "a Propsy"
 	}
 	return propsies(count)
 }
 
-// announcementBlocks is the public announcement for a propsy (delta > 0) or a
-// dropsy (delta < 0), count of them to each person named.
+// announcementBlocks is the public announcement for a Propsy (delta > 0) or a
+// Dropsy (delta < 0), count of them to each person named.
 func announcementBlocks(from string, to []string, reason string, delta, count int) []slack.Block {
 	text := fmt.Sprintf(":raised_hands: <@%s> gave %s to %s", from, giftNoun(delta, count), mentions(to))
 	if delta < 0 {
@@ -103,7 +103,7 @@ func slackTime(t time.Time) string {
 func (q *quota) lines() []string {
 	var out []string
 	if q.limit > 0 {
-		avail := fmt.Sprintf("You have *%d* propsies/dropsies available", max(q.limit-q.used, 0))
+		avail := fmt.Sprintf("You have *%d* Propsies/Dropsies available", max(q.limit-q.used, 0))
 		if q.resetsAt.IsZero() {
 			out = append(out, fmt.Sprintf("%s (it resets %s after you first use one).", avail, formatPeriod(q.period)))
 		} else {
@@ -140,16 +140,16 @@ func limitMessage(e *store.LimitError, n int) string {
 		for i, c := range e.Capped {
 			parts[i] = fmt.Sprintf("<@%s> (resets %s)", c.UserID, slackTime(c.ResetsAt))
 		}
-		return fmt.Sprintf("You've hit the per-person limit (%d propsies/dropsies per %s) for %s. Try again then, or leave them out.",
+		return fmt.Sprintf("You've hit the per-person limit (%d Propsies/Dropsies per %s) for %s. Try again then, or leave them out.",
 			e.Limit, formatPeriod(e.Period), strings.Join(parts, ", "))
 	}
 	if e.Left <= 0 {
-		return fmt.Sprintf("You've used all %d of your propsies/dropsies.%s", e.Limit, resetClause(e.ResetsAt))
+		return fmt.Sprintf("You've used all %d of your Propsies/Dropsies.%s", e.Limit, resetClause(e.ResetsAt))
 	}
-	return fmt.Sprintf("That takes %d, but you only have %d propsies/dropsies left.%s", n, e.Left, resetClause(e.ResetsAt))
+	return fmt.Sprintf("That takes %d, but you only have %d Propsies/Dropsies left.%s", n, e.Left, resetClause(e.ResetsAt))
 }
 
-// totals renders "5 propsies" or "5 propsies, 10 dropsies"; dropsies are left
+// totals renders "5 Propsies" or "5 Propsies, 10 Dropsies"; Dropsies are left
 // out when there are none, so teams not using /dropsy never see them.
 func totals(p, d int) string {
 	if d == 0 {
@@ -173,9 +173,9 @@ const (
 // boards are the two leaderboards, each sorted highest first. A cut field is
 // the row limit a board was truncated to, or 0 if it's complete.
 type boards struct {
-	received    []store.Entry // everyone who has received a propsy or dropsy, by score
+	received    []store.Entry // everyone who has received a Propsy or Dropsy, by score
 	receivedCut int
-	given       []store.Entry // everyone who has given one, by how many (propsies + dropsies)
+	given       []store.Entry // everyone who has given one, by how many (propsies + Dropsies)
 	givenCut    int
 }
 
@@ -234,25 +234,53 @@ func homeBlocks(stats store.Stats, b boards, recent []store.Action, q *quota) []
 		section(summary),
 		slack.NewDividerBlock(),
 	}
-	blocks = append(blocks, boardBlocks("Leaderboard: received", b.received, "No propsies yet — be the first!", b.receivedCut)...)
+	blocks = append(blocks, boardBlocks("Leaderboard: received", b.received, "No Propsies yet — be the first!", b.receivedCut)...)
 	blocks = append(blocks, slack.NewDividerBlock())
 	blocks = append(blocks, boardBlocks("Leaderboard: given", b.given, "Nobody has given anything yet.", b.givenCut)...)
 
-	if len(recent) > 0 {
+	if groups := groupRecent(recent, recentCount); len(groups) > 0 {
 		blocks = append(blocks, slack.NewDividerBlock(), section("*Recently received*"))
-		for _, a := range recent {
+		for _, g := range groups {
 			var b strings.Builder
-			if a.Delta < 0 {
-				fmt.Fprintf(&b, "• :droplet: <@%s> gave you a dropsy", a.From)
+			if g.Delta < 0 {
+				fmt.Fprintf(&b, "• :droplet: <@%s> gave you %s", g.From, giftNoun(g.Delta, g.count))
 			} else {
-				fmt.Fprintf(&b, "• <@%s> gave you a propsy", a.From)
+				fmt.Fprintf(&b, "• <@%s> gave you %s", g.From, giftNoun(g.Delta, g.count))
 			}
-			if a.Reason != "" {
-				fmt.Fprintf(&b, ": %s", a.Reason)
+			if g.Reason != "" {
+				fmt.Fprintf(&b, ": %s", g.Reason)
 			}
-			fmt.Fprintf(&b, " _(<!date^%d^{date_short_pretty}|%s>)_", a.CreatedAt.Unix(), a.CreatedAt.Format("2006-01-02"))
+			fmt.Fprintf(&b, " _(<!date^%d^{date_short_pretty}|%s>)_", g.CreatedAt.Unix(), g.CreatedAt.Format("2006-01-02"))
 			blocks = append(blocks, section(b.String()))
 		}
 	}
 	return blocks
+}
+
+// recentGroup is one give as the recent list shows it: the propsies or dropsies
+// one giver sent one person in one batch, which the store keeps as one row each.
+type recentGroup struct {
+	store.Action
+	count int
+}
+
+// groupRecent folds consecutive rows of the same batch (same giver, reason,
+// kind and time) into one group, newest first, and keeps at most limit groups.
+func groupRecent(rows []store.Action, limit int) []recentGroup {
+	var out []recentGroup
+	for _, r := range rows {
+		if n := len(out); n > 0 && sameBatch(out[n-1].Action, r) {
+			out[n-1].count++
+			continue
+		}
+		if len(out) == limit {
+			break
+		}
+		out = append(out, recentGroup{Action: r, count: 1})
+	}
+	return out
+}
+
+func sameBatch(a, b store.Action) bool {
+	return a.From == b.From && a.Delta == b.Delta && a.Reason == b.Reason && a.CreatedAt.Equal(b.CreatedAt)
 }

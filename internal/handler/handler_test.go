@@ -154,11 +154,11 @@ func TestGivePropsies(t *testing.T) {
 
 	for _, u := range []string{"UA", "UB"} {
 		if st, _ := repo.Stats(ctx, u); st.PropsiesReceived != 1 || st.DropsiesReceived != 0 {
-			t.Errorf("%s stats = %+v, want 1 propsy received", u, st)
+			t.Errorf("%s stats = %+v, want 1 Propsy received", u, st)
 		}
 	}
 	if st, _ := repo.Stats(ctx, "UGIVER"); st.PropsiesGiven != 2 || st.DropsiesGiven != 0 {
-		t.Errorf("giver stats = %+v, want 2 propsies given", st)
+		t.Errorf("giver stats = %+v, want 2 Propsies given", st)
 	}
 	if r := fs.lastResponse(t); len(fs.responses) != 1 || r.ResponseType != slack.ResponseTypeEphemeral || !strings.Contains(r.Text, "You gave") {
 		t.Fatalf("want one private confirmation to the giver, got %+v", fs.responses)
@@ -183,13 +183,13 @@ func TestGiveDropsiesAreTrackedSeparately(t *testing.T) {
 	}
 	st, _ := repo.Stats(ctx, "UB")
 	if st.PropsiesReceived != 2 || st.DropsiesReceived != 1 || st.Score() != 1 {
-		t.Errorf("UB stats = %+v, want 2 propsies, 1 dropsy received", st)
+		t.Errorf("UB stats = %+v, want 2 Propsies, 1 Dropsy received", st)
 	}
 	if st, _ := repo.Stats(ctx, "UD"); st.DropsiesGiven != 1 || st.PropsiesGiven != 0 {
-		t.Errorf("UD stats = %+v, want 1 dropsy given", st)
+		t.Errorf("UD stats = %+v, want 1 Dropsy given", st)
 	}
-	if r := fs.lastResponse(t); r.ResponseType != slack.ResponseTypeEphemeral || !strings.Contains(r.Text, "dropsy") {
-		t.Errorf("want a private dropsy confirmation, got %+v", r)
+	if r := fs.lastResponse(t); r.ResponseType != slack.ResponseTypeEphemeral || !strings.Contains(r.Text, "Dropsy") {
+		t.Errorf("want a private Dropsy confirmation, got %+v", r)
 	}
 }
 
@@ -200,7 +200,7 @@ func TestRejections(t *testing.T) {
 		want string
 	}{
 		{"self only", propsy("UME", "<@UME> me"), "yourself"},
-		{"dropsy self only", dropsy("UME", "<@UME> me"), "yourself"},
+		{"Dropsy self only", dropsy("UME", "<@UME> me"), "yourself"},
 		{"too many", propsy("UME", "<@U1><@U2><@U3><@U4><@U5><@U6><@U7><@U8><@U9><@UA><@UB>"), "at most"},
 	}
 	for _, tt := range tests {
@@ -257,7 +257,7 @@ func TestHomeListsEveryoneOnBothBoards(t *testing.T) {
 func TestLeaderboardMax(t *testing.T) {
 	h, fs, _ := newTestHandler(t)
 	ctx := context.Background()
-	for i := 1; i <= 4; i++ { // UREC1 gets 1 propsy, UREC2 gets 2, ... so the order is UREC4, 3, 2, 1
+	for i := 1; i <= 4; i++ { // UREC1 gets 1 Propsy, UREC2 gets 2, ... so the order is UREC4, 3, 2, 1
 		for j := 0; j < i; j++ {
 			_ = h.HandleSlashCommand(ctx, propsy(fmt.Sprintf("UG%d%d", i, j), fmt.Sprintf("<@UREC%d> hi", i)))
 		}
@@ -325,7 +325,7 @@ func TestOverallLimitResetsInFullAfterThePeriod(t *testing.T) {
 
 	_ = h.HandleSlashCommand(ctx, propsy("UA", "<@UB> <@UC> hi")) // opens the window at t0
 	now = t0.Add(12 * time.Hour)
-	_ = h.HandleSlashCommand(ctx, dropsy("UA", "<@UD> lol")) // dropsies spend the same allowance
+	_ = h.HandleSlashCommand(ctx, dropsy("UA", "<@UD> lol")) // Dropsies spend the same allowance
 	if fs.lastResponse(t).ResponseType != slack.ResponseTypeEphemeral || strings.Contains(fs.lastResponse(t).Text, "limit") {
 		t.Fatalf("first two commands should succeed: %+v", fs.responses)
 	}
@@ -338,17 +338,17 @@ func TestOverallLimitResetsInFullAfterThePeriod(t *testing.T) {
 		t.Errorf("over-limit message = %+v; want 'used all 3' and the reset time (t0+24h)", r)
 	}
 	if st, _ := repo.Stats(ctx, "UE"); st.PropsiesReceived != 0 {
-		t.Errorf("rejected propsy must not be recorded")
+		t.Errorf("rejected Propsy must not be recorded")
 	}
 
 	// Other givers have their own allowance.
 	_ = h.HandleSlashCommand(ctx, propsy("UB", "<@UA> hi"))
 	if fs.lastResponse(t).ResponseType != slack.ResponseTypeEphemeral {
-		t.Errorf("another user should still be able to give propsies")
+		t.Errorf("another user should still be able to give Propsies")
 	}
 
 	// Once the period since the window opened has elapsed it resets to the full
-	// 3, not just the part that has "aged out": the dropsy given at +12h doesn't
+	// 3, not just the part that has "aged out": the Dropsy given at +12h doesn't
 	// count against the new window.
 	now = t0.Add(24*time.Hour + time.Second)
 	_ = h.HandleSlashCommand(ctx, propsy("UA", "<@UE> <@UF> <@UG> back again"))
@@ -362,7 +362,7 @@ func TestOverallLimitIsAllOrNothing(t *testing.T) {
 	h.Limit, h.LimitPeriod = 2, time.Hour
 	ctx := context.Background()
 	_ = h.HandleSlashCommand(ctx, propsy("UA", "<@UB> <@UC> <@UD> hi"))
-	if got := fs.lastResponse(t).Text; !strings.Contains(got, "takes 3") || !strings.Contains(got, "only have 2 propsies/dropsies left") {
+	if got := fs.lastResponse(t).Text; !strings.Contains(got, "takes 3") || !strings.Contains(got, "only have 2 Propsies/Dropsies left") {
 		t.Errorf("message = %q", got)
 	}
 	if board, _ := repo.Leaderboard(ctx, store.BoardReceived, 10); len(board) != 0 {
@@ -379,7 +379,7 @@ func TestPerPersonLimit(t *testing.T) {
 	h.Now = func() time.Time { return now }
 
 	_ = h.HandleSlashCommand(ctx, propsy("UA", "<@UB> one"))
-	_ = h.HandleSlashCommand(ctx, dropsy("UA", "<@UB> two")) // dropsies count towards the same cap
+	_ = h.HandleSlashCommand(ctx, dropsy("UA", "<@UB> two")) // Dropsies count towards the same cap
 	if strings.Contains(fs.lastResponse(t).Text, "limit") {
 		t.Fatalf("first two should succeed")
 	}
@@ -387,7 +387,7 @@ func TestPerPersonLimit(t *testing.T) {
 	_ = h.HandleSlashCommand(ctx, propsy("UA", "<@UB> <@UC> three"))
 	r := fs.lastResponse(t)
 	if r.ResponseType != slack.ResponseTypeEphemeral || !strings.Contains(r.Text, "<@UB> (resets <!date^") || strings.Contains(r.Text, "<@UC>") ||
-		!strings.Contains(r.Text, "2 propsies/dropsies per 1d") {
+		!strings.Contains(r.Text, "2 Propsies/Dropsies per 1d") {
 		t.Errorf("message = %+v; want ephemeral naming only the capped person and when they reset", r)
 	}
 	if st, _ := repo.Stats(ctx, "UC"); st.PropsiesReceived != 0 {
@@ -424,7 +424,7 @@ func TestUsageShowsAllowance(t *testing.T) {
 	fs.openErr = errors.New("trigger expired")
 	_ = h.HandleSlashCommand(context.Background(), propsy("UA", ""))
 	got := fs.lastResponse(t).Text
-	for _, want := range []string{usageNeedle, "*200* propsies/dropsies available", "resets 30d after you first use one", "up to 5 per 1d"} {
+	for _, want := range []string{usageNeedle, "*200* Propsies/Dropsies available", "resets 30d after you first use one", "up to 5 per 1d"} {
 		if !strings.Contains(got, want) {
 			t.Errorf("usage missing %q: %s", want, got)
 		}
@@ -441,7 +441,7 @@ func TestHomeShowsAllowanceAndWhenItResets(t *testing.T) {
 		t.Fatal(err)
 	}
 	out := render(t, fs.published["UA"].Blocks.BlockSet)
-	want := "*9* propsies/dropsies available, resetting to 10 <!date^" + strconv.FormatInt(t0.Add(7*24*time.Hour).Unix(), 10)
+	want := "*9* Propsies/Dropsies available, resetting to 10 <!date^" + strconv.FormatInt(t0.Add(7*24*time.Hour).Unix(), 10)
 	if !strings.Contains(out, want) {
 		t.Errorf("home missing %q: %s", want, out)
 	}
@@ -470,16 +470,16 @@ func TestReceiverIsDMedAfterTheResponse(t *testing.T) {
 		t.Fatalf("DMs must wait until the response is out, got %+v", fs.posts)
 	}
 	follow()
-	if len(fs.posts) != 1 || fs.posts[0].channel != "UB" || !strings.Contains(fs.posts[0].text, "gave you 2 propsies") {
-		t.Errorf("DM = %+v, want one to UB for 2 propsies", fs.posts)
+	if len(fs.posts) != 1 || fs.posts[0].channel != "UB" || !strings.Contains(fs.posts[0].text, "gave you 2 Propsies") {
+		t.Errorf("DM = %+v, want one to UB for 2 Propsies", fs.posts)
 	}
 }
 
 func TestDropsyDMsTheReceiver(t *testing.T) {
 	h, fs, _ := newTestHandler(t)
 	_ = h.HandleSlashCommand(context.Background(), dropsy("UA", "<@UB> for being a menace"))
-	if len(fs.posts) != 1 || !strings.Contains(fs.posts[0].text, "gave you a dropsy") {
-		t.Errorf("posts = %+v, want a dropsy DM to UB", fs.posts)
+	if len(fs.posts) != 1 || !strings.Contains(fs.posts[0].text, "gave you a Dropsy") {
+		t.Errorf("posts = %+v, want a Dropsy DM to UB", fs.posts)
 	}
 }
 
@@ -491,7 +491,7 @@ func TestAnnounceChannelIsOptIn(t *testing.T) {
 	_ = h.HandleSlashCommand(ctx, propsy("UA", "<@UB> for the help"))
 	var announced bool
 	for _, p := range fs.posts {
-		if p.channel == kudosChannel && strings.Contains(p.text, "propsy!") {
+		if p.channel == kudosChannel && strings.Contains(p.text, "Propsy!") {
 			announced = true
 		}
 	}
@@ -519,7 +519,7 @@ func TestAnnounceChannelFailureIsTellTheGiverPrivately(t *testing.T) {
 		t.Errorf("giver should be told, got %+v", r)
 	}
 	if st, _ := repo.Stats(context.Background(), "UB"); st.PropsiesReceived != 1 {
-		t.Errorf("the propsy should still be recorded")
+		t.Errorf("the Propsy should still be recorded")
 	}
 }
 

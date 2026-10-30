@@ -106,7 +106,7 @@ func TestCommandGivesProps(t *testing.T) {
 		t.Fatalf("status = %d: %s", rec.Code, rec.Body)
 	}
 	if st, _ := repo.Stats(context.Background(), "UB"); st.PropsiesReceived != 1 {
-		t.Errorf("propsies received = %d, want 1", st.PropsiesReceived)
+		t.Errorf("Propsies received = %d, want 1", st.PropsiesReceived)
 	}
 	if len(fs.responses) != 1 {
 		t.Errorf("responses = %d, want 1", len(fs.responses))
@@ -124,7 +124,7 @@ func TestDropsyCommandRoutes(t *testing.T) {
 		t.Fatalf("status = %d: %s", rec.Code, rec.Body)
 	}
 	if st, _ := repo.Stats(context.Background(), "UB"); st.DropsiesReceived != 1 {
-		t.Errorf("dropsies received = %d, want 1", st.DropsiesReceived)
+		t.Errorf("Dropsies received = %d, want 1", st.DropsiesReceived)
 	}
 }
 
@@ -138,7 +138,7 @@ func TestBadSignatureRejected(t *testing.T) {
 		}
 	}
 	if board, _ := repo.Leaderboard(context.Background(), store.BoardReceived, 10); len(board) != 0 {
-		t.Errorf("unsigned request must not record propsies")
+		t.Errorf("unsigned request must not record Propsies")
 	}
 }
 
@@ -196,7 +196,7 @@ func TestFormSubmissionOverInteractions(t *testing.T) {
 		t.Fatalf("status = %d: %s", rec.Code, rec.Body)
 	}
 	if st, _ := repo.Stats(context.Background(), "UB"); st.PropsiesReceived != 1 {
-		t.Errorf("propsies received = %d, want 1", st.PropsiesReceived)
+		t.Errorf("Propsies received = %d, want 1", st.PropsiesReceived)
 	}
 }
 

@@ -1,4 +1,4 @@
-// Command Propsy is a self-hosted kudos bot (propsies and dropsies) for Slack.
+// Command Propsy is a self-hosted kudos bot (propsies and Dropsies) for Slack.
 // It runs in one of two modes, selected by the ENVIRONMENT variable (see
 // PLAN.md §2 and internal/config):
 //
