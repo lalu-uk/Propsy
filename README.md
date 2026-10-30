@@ -6,7 +6,7 @@
 
 Self-hosted, scale-to-zero **kudos for Slack**, as a single static Go binary.
 
-- `/propsy @alice @bob for unblocking the release` gives each of them a propsy and announces it.
+- `/propsy @alice @bob for unblocking the release` gives each of them a propsy. You get a private confirmation, and each of them gets a DM. Nothing is posted publicly unless `PROPSY_ANNOUNCE_CHANNEL` is set.
 - `/propsy 5 @alice for unblocking the release` gives Alice five. The optional leading number is
   the count for each person, from 1 to 5 (the default is 1), and each one counts against the limits.
 - `/propsy` on its own opens a form to pick people, how many each (1 to 5, default 1), and a
@@ -80,7 +80,7 @@ There is no `latest` tag: always use an exact version. To check what you've down
 | `PROPSY_PER_PERSON_LIMIT_PERIOD` | `1d` | Window length for the per-person limit, same rules. |
 | `PROPSY_DB_PREFIX` | `propsy` | GCP only. Prefix for Firestore collections (`propsy_users`, `propsy_boards`, ...), so Propsy can share a database. Changing it points the app at different collections: copy the data first. |
 | `PROPSY_LEADERBOARD_MAX_USERS` | `0` | Most people each leaderboard lists. `0` = everyone. Hard maximum 1000: larger values are lowered to 1000 with a startup warning. |
-| `PROPSY_ANNOUNCE_CHANNEL` | _(unset)_ | Announce in this channel instead of where the command was run. Channel ID recommended (`C0123ABCDEF`); `#name` works for public channels. Invite the bot first. |
+| `PROPSY_ANNOUNCE_CHANNEL` | _(unset)_ | Post each announcement in this channel (opt-in: nothing is public by default). Channel ID recommended (`C0123ABCDEF`); `#name` works for public channels. Invite the bot first. |
 
 Allowances reset in full once the period has elapsed, not gradually: your window opens when
 you first give a propsy or dropsy, and 30 days later (by default) you're back to 200. The

@@ -237,3 +237,14 @@ func TestPickingPeopleUpdatesTheFormWithAllowances(t *testing.T) {
 		t.Errorf("context = %q", text)
 	}
 }
+
+func TestPeoplePickerSendsSelectionEvents(t *testing.T) {
+	h, fs, _ := newTestHandler(t)
+	cmd := propsy("UA", "")
+	cmd.TriggerID = testTrigger
+	_ = h.HandleSlashCommand(context.Background(), cmd)
+	who := fs.opened[0].view.Blocks.BlockSet[0].(*slack.InputBlock)
+	if !who.DispatchAction {
+		t.Error("the people picker needs dispatch_action, or Slack never sends the selection")
+	}
+}

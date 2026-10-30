@@ -106,26 +106,42 @@ const (
 	usageDropsy = "Usage: `/dropsy [count] @someone [@another …] for that thing you did`"
 )
 
-// HandleSlashCommand dispatches `/propsy @user [@user …] [reason]` (give a
-// propsy) and `/dropsy @user [@user …] [reason]` (give a dropsy). With no
-// recipients it opens the give form instead. Any other command name is refused.
+// Followup is work that runs after the response has been sent, so slow Slack
+// calls (DMs) stay off the 3s acknowledgement path. Nil when there's none.
+type Followup func()
+
+// HandleSlashCommand runs a slash command and its follow-up work, in order.
+// Transports call DispatchSlashCommand instead so they can respond first.
 func (h *Handler) HandleSlashCommand(ctx context.Context, cmd slack.SlashCommand) error {
+	f, err := h.DispatchSlashCommand(ctx, cmd)
+	if f != nil {
+		f()
+	}
+	return err
+}
+
+// DispatchSlashCommand dispatches `/propsy @user [@user …] [reason]` (give a
+// propsy) and `/dropsy @user [@user …] [reason]` (give a dropsy). It does the
+// work that must finish before the response, and returns the follow-up that
+// sends the DMs. With no recipients it opens the give form instead. Any other
+// command name is refused.
+func (h *Handler) DispatchSlashCommand(ctx context.Context, cmd slack.SlashCommand) (Followup, error) {
 	delta, usage, ok := commandDelta(cmd.Command)
 	if !ok {
-		return h.ephemeral(ctx, cmd, fmt.Sprintf("Sorry, I only answer to `%s` and `%s`, not `%s`.", commandPropsy, commandDropsy, cmd.Command))
+		return nil, h.ephemeral(ctx, cmd, fmt.Sprintf("Sorry, I only answer to `%s` and `%s`, not `%s`.", commandPropsy, commandDropsy, cmd.Command))
 	}
 
 	count, rest, err := parseCount(cmd.Text)
 	if err != nil {
-		return h.ephemeral(ctx, cmd, err.Error())
+		return nil, h.ephemeral(ctx, cmd, err.Error())
 	}
 	recipients, reason := parseCommand(rest)
 	if len(recipients) == 0 {
 		if err := h.openForm(ctx, cmd, delta); err != nil {
 			slog.Warn("open give form; showing usage instead", "err", err)
-			return h.ephemeral(ctx, cmd, h.withQuota(ctx, cmd.UserID, usage))
+			return nil, h.ephemeral(ctx, cmd, h.withQuota(ctx, cmd.UserID, usage))
 		}
-		return nil
+		return nil, nil
 	}
 	return h.give(ctx, cmd, delta, recipients, reason, count)
 }
@@ -169,7 +185,7 @@ func commandDelta(command string) (delta int, usage string, ok bool) {
 
 // give records a propsy (delta 1) or dropsy (delta -1) from cmd.UserID to each
 // recipient and announces it. Shared by the slash command and the form.
-func (h *Handler) give(ctx context.Context, cmd slack.SlashCommand, delta int, recipients []string, reason string, count int) error {
+func (h *Handler) give(ctx context.Context, cmd slack.SlashCommand, delta int, recipients []string, reason string, count int) (Followup, error) {
 	var others []string
 	for _, r := range recipients {
 		if r != cmd.UserID {
@@ -179,9 +195,9 @@ func (h *Handler) give(ctx context.Context, cmd slack.SlashCommand, delta int, r
 
 	switch {
 	case len(others) == 0:
-		return h.ephemeral(ctx, cmd, "Nice try, but you can't do that to yourself. :wink:")
+		return nil, h.ephemeral(ctx, cmd, "Nice try, but you can't do that to yourself. :wink:")
 	case len(others) > maxRecipients:
-		return h.ephemeral(ctx, cmd, fmt.Sprintf("That's a lot of people! Please pick at most %d at a time.", maxRecipients))
+		return nil, h.ephemeral(ctx, cmd, fmt.Sprintf("That's a lot of people! Please pick at most %d at a time.", maxRecipients))
 	}
 
 	now := h.Now()
@@ -195,40 +211,77 @@ func (h *Handler) give(ctx context.Context, cmd slack.SlashCommand, delta int, r
 	if err := h.Store.AddActions(ctx, actions, h.limits(), now); err != nil {
 		var limitErr *store.LimitError
 		if errors.As(err, &limitErr) {
-			return h.ephemeral(ctx, cmd, limitMessage(limitErr, len(actions)))
+			return nil, h.ephemeral(ctx, cmd, limitMessage(limitErr, len(actions)))
 		}
 		_ = h.ephemeral(ctx, cmd, "Sorry, something went wrong recording that. Please try again.")
-		return err
+		return nil, err
 	}
 
 	// Home tabs aren't refreshed here: a tab is rebuilt from the store whenever
 	// it's opened, and doing it live would put Slack calls on the 3s ack path.
-	return h.announce(ctx, cmd, others, reason, delta, count)
+	if err := h.ephemeral(ctx, cmd, confirmation(delta, count, others, reason)); err != nil {
+		slog.Warn("confirm to giver", "user", cmd.UserID, "err", err)
+	}
+	if err := h.announce(ctx, cmd, others, reason, delta, count); err != nil {
+		slog.Warn("post to announce channel", "channel", h.AnnounceChannel, "err", err)
+		if err := h.ephemeral(ctx, cmd, fmt.Sprintf("Recorded, but I couldn't post to %s: %v", channelRef(h.AnnounceChannel), err)); err != nil {
+			slog.Warn("tell giver about announce failure", "user", cmd.UserID, "err", err)
+		}
+	}
+
+	// The DMs go out after the response, so they're kept off the ack path.
+	bg := context.WithoutCancel(ctx)
+	return func() { h.notifyReceivers(bg, cmd.UserID, others, reason, delta, count) }, nil
 }
 
-// announce posts the public announcement: to AnnounceChannel when configured
-// (confirming to the giver privately), otherwise, or if that fails, to the
-// channel the command was run in.
-func (h *Handler) announce(ctx context.Context, cmd slack.SlashCommand, to []string, reason string, delta, count int) error {
+// confirmation is the giver's private confirmation, sent as an ephemeral
+// message. Nothing is posted publicly unless PROPSY_ANNOUNCE_CHANNEL is set.
+func confirmation(delta, count int, to []string, reason string) string {
+	text := fmt.Sprintf("You gave %s to %s.", giftNoun(delta, count), mentions(to))
+	if reason != "" {
+		text += " For: " + reason
+	}
+	return text
+}
+
+// announce posts the public announcement to AnnounceChannel, if one is set. It
+// does nothing otherwise: nothing is public by default.
+func (h *Handler) announce(_ context.Context, cmd slack.SlashCommand, to []string, reason string, delta, count int) error {
+	ch := h.AnnounceChannel
+	if ch == "" {
+		return nil
+	}
 	blocks := announcementBlocks(cmd.UserID, to, reason, delta, count)
 	text := fmt.Sprintf("%s <@%s> gave %s to %s.", announcementText(delta), cmd.UserID, giftNoun(delta, count), mentions(to))
 	if reason != "" {
 		text += " Reason: " + reason
 	}
+	_, _, err := h.Slack.PostMessage(ch, slack.MsgOptionBlocks(blocks...), slack.MsgOptionText(text, false))
+	return err
+}
 
-	if ch := h.AnnounceChannel; ch != "" && ch != cmd.ChannelID {
-		_, _, err := h.Slack.PostMessage(ch, slack.MsgOptionBlocks(blocks...), slack.MsgOptionText(text, false))
-		if err == nil {
-			return h.ephemeral(ctx, cmd, fmt.Sprintf(":white_check_mark: Posted in %s.", channelRef(ch)))
+// notifyReceivers DMs each person given something, one message per person
+// covering the whole batch. A failed DM is logged and doesn't affect the rest.
+func (h *Handler) notifyReceivers(_ context.Context, from string, to []string, reason string, delta, count int) {
+	text := receiptText(from, delta, count, reason)
+	for _, u := range to {
+		if _, _, err := h.Slack.PostMessage(u, slack.MsgOptionText(text, false)); err != nil {
+			slog.Warn("DM receiver", "user", u, "err", err)
 		}
-		slog.Warn("post to announce channel; falling back to the current channel", "channel", ch, "err", err)
 	}
+}
 
-	return h.Slack.Respond(ctx, cmd.ResponseURL, &slack.WebhookMessage{
-		ResponseType: slack.ResponseTypeInChannel,
-		Blocks:       &slack.Blocks{BlockSet: blocks},
-		Text:         text,
-	})
+// receiptText is the DM a receiver gets, for example "@alice gave you 2 propsies".
+func receiptText(from string, delta, count int, reason string) string {
+	emoji := ":raised_hands:"
+	if delta < 0 {
+		emoji = ":droplet:"
+	}
+	text := fmt.Sprintf("%s <@%s> gave you %s.", emoji, from, giftNoun(delta, count))
+	if reason != "" {
+		text += "\n>" + strings.ReplaceAll(reason, "\n", "\n>")
+	}
+	return text
 }
 
 // Ready reports whether the app can serve requests: the store is reachable.
