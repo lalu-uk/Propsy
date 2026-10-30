@@ -1,5 +1,18 @@
 # Changelog
 
+## [4.2.0](https://github.com/lalu-uk/Propsy/compare/v4.1.0...v4.2.0) (2026-10-30)
+
+
+### Features
+
+* **handler:** DM receivers; nothing public by default ([5afd45b](https://github.com/lalu-uk/Propsy/commit/5afd45badfcac61592fbad5070438942dd4eb34c))
+
+
+### Bug Fixes
+
+* **deps:** update module cloud.google.com/go/firestore to v1.29.2 ([e2449ee](https://github.com/lalu-uk/Propsy/commit/e2449ee3f34f12f905597c57b7fe0531c4a4b670))
+* **deps:** update module google.golang.org/api to v0.310.0 ([5a96506](https://github.com/lalu-uk/Propsy/commit/5a96506c4847d3a3c4182426b6cb0c826c28f0bf))
+
 ## [4.1.0](https://github.com/lalu-uk/Propsy/compare/v4.0.0...v4.1.0) (2026-10-29)
 
 
