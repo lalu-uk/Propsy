@@ -130,8 +130,12 @@ func (r *Runner) process(ctx context.Context, evt socketmode.Event) {
 		if !ok {
 			return
 		}
-		if err := r.handler.HandleSlashCommand(ctx, cmd); err != nil {
+		follow, err := r.handler.DispatchSlashCommand(ctx, cmd)
+		if err != nil {
 			r.log.Printf("slash command error: %v", err)
+		}
+		if follow != nil {
+			follow()
 		}
 
 	case socketmode.EventTypeInteractive:
@@ -139,10 +143,11 @@ func (r *Runner) process(ctx context.Context, evt socketmode.Event) {
 		if !ok {
 			return
 		}
+		var follow handler.Followup
 		var err error
 		switch cb.Type {
 		case slack.InteractionTypeViewSubmission:
-			err = r.handler.HandleViewSubmission(ctx, cb)
+			follow, err = r.handler.DispatchViewSubmission(ctx, cb)
 		case slack.InteractionTypeBlockActions:
 			err = r.handler.HandleBlockAction(ctx, cb)
 		default:
@@ -150,6 +155,9 @@ func (r *Runner) process(ctx context.Context, evt socketmode.Event) {
 		}
 		if err != nil {
 			r.log.Printf("interaction %s error: %v", cb.Type, err)
+		}
+		if follow != nil {
+			follow()
 		}
 
 	case socketmode.EventTypeEventsAPI:

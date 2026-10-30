@@ -75,12 +75,25 @@ func (s *Server) handleCommand(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "bad request", http.StatusBadRequest)
 		return
 	}
-	if err := s.handler.HandleSlashCommand(r.Context(), cmd); err != nil {
+	follow, err := s.handler.DispatchSlashCommand(r.Context(), cmd)
+	if err != nil {
 		s.log.Printf("slash command error: %v", err)
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
+	respondThen(w, follow)
+}
+
+// respondThen acknowledges the request, then runs follow-up work (the DMs) while
+// the request is still open, so the work stays off the Slack ack path.
+func respondThen(w http.ResponseWriter, follow handler.Followup) {
 	w.WriteHeader(http.StatusOK)
+	if f, ok := w.(http.Flusher); ok {
+		f.Flush()
+	}
+	if follow != nil {
+		follow()
+	}
 }
 
 // handleInteraction processes interactivity payloads: the give form's
@@ -97,10 +110,11 @@ func (s *Server) handleInteraction(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "bad request", http.StatusBadRequest)
 		return
 	}
+	var follow handler.Followup
 	var handleErr error
 	switch cb.Type {
 	case slack.InteractionTypeViewSubmission:
-		handleErr = s.handler.HandleViewSubmission(r.Context(), cb)
+		follow, handleErr = s.handler.DispatchViewSubmission(r.Context(), cb)
 	case slack.InteractionTypeBlockActions:
 		handleErr = s.handler.HandleBlockAction(r.Context(), cb)
 	}
@@ -109,7 +123,7 @@ func (s *Server) handleInteraction(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
-	w.WriteHeader(http.StatusOK)
+	respondThen(w, follow)
 }
 
 // handleEvent processes Events API callbacks: the one-off url_verification

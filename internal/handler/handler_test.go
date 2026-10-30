@@ -160,8 +160,11 @@ func TestGivePropsies(t *testing.T) {
 	if st, _ := repo.Stats(ctx, "UGIVER"); st.PropsiesGiven != 2 || st.DropsiesGiven != 0 {
 		t.Errorf("giver stats = %+v, want 2 propsies given", st)
 	}
-	if r := fs.lastResponse(t); len(fs.responses) != 1 || r.ResponseType != slack.ResponseTypeInChannel {
-		t.Fatalf("want one in_channel response, got %+v", fs.responses)
+	if r := fs.lastResponse(t); len(fs.responses) != 1 || r.ResponseType != slack.ResponseTypeEphemeral || !strings.Contains(r.Text, "You gave") {
+		t.Fatalf("want one private confirmation to the giver, got %+v", fs.responses)
+	}
+	if len(fs.posts) != 2 || fs.posts[0].channel != "UA" || fs.posts[1].channel != "UB" {
+		t.Errorf("want one DM each to UA and UB, got %+v", fs.posts)
 	}
 	if len(fs.published) != 0 {
 		t.Errorf("giving must not publish Home tabs (they're built when opened), published %d", len(fs.published))
@@ -185,8 +188,8 @@ func TestGiveDropsiesAreTrackedSeparately(t *testing.T) {
 	if st, _ := repo.Stats(ctx, "UD"); st.DropsiesGiven != 1 || st.PropsiesGiven != 0 {
 		t.Errorf("UD stats = %+v, want 1 dropsy given", st)
 	}
-	if r := fs.lastResponse(t); r.ResponseType != slack.ResponseTypeInChannel || !strings.Contains(r.Text, "dropsy") {
-		t.Errorf("want an in_channel dropsy announcement, got %+v", r)
+	if r := fs.lastResponse(t); r.ResponseType != slack.ResponseTypeEphemeral || !strings.Contains(r.Text, "dropsy") {
+		t.Errorf("want a private dropsy confirmation, got %+v", r)
 	}
 }
 
@@ -323,7 +326,7 @@ func TestOverallLimitResetsInFullAfterThePeriod(t *testing.T) {
 	_ = h.HandleSlashCommand(ctx, propsy("UA", "<@UB> <@UC> hi")) // opens the window at t0
 	now = t0.Add(12 * time.Hour)
 	_ = h.HandleSlashCommand(ctx, dropsy("UA", "<@UD> lol")) // dropsies spend the same allowance
-	if fs.lastResponse(t).ResponseType != slack.ResponseTypeInChannel {
+	if fs.lastResponse(t).ResponseType != slack.ResponseTypeEphemeral || strings.Contains(fs.lastResponse(t).Text, "limit") {
 		t.Fatalf("first two commands should succeed: %+v", fs.responses)
 	}
 
@@ -340,7 +343,7 @@ func TestOverallLimitResetsInFullAfterThePeriod(t *testing.T) {
 
 	// Other givers have their own allowance.
 	_ = h.HandleSlashCommand(ctx, propsy("UB", "<@UA> hi"))
-	if fs.lastResponse(t).ResponseType != slack.ResponseTypeInChannel {
+	if fs.lastResponse(t).ResponseType != slack.ResponseTypeEphemeral {
 		t.Errorf("another user should still be able to give propsies")
 	}
 
@@ -349,7 +352,7 @@ func TestOverallLimitResetsInFullAfterThePeriod(t *testing.T) {
 	// count against the new window.
 	now = t0.Add(24*time.Hour + time.Second)
 	_ = h.HandleSlashCommand(ctx, propsy("UA", "<@UE> <@UF> <@UG> back again"))
-	if fs.lastResponse(t).ResponseType != slack.ResponseTypeInChannel {
+	if fs.lastResponse(t).ResponseType != slack.ResponseTypeEphemeral {
 		t.Errorf("allowance should be back to 3, got %+v", fs.lastResponse(t))
 	}
 }
@@ -377,7 +380,7 @@ func TestPerPersonLimit(t *testing.T) {
 
 	_ = h.HandleSlashCommand(ctx, propsy("UA", "<@UB> one"))
 	_ = h.HandleSlashCommand(ctx, dropsy("UA", "<@UB> two")) // dropsies count towards the same cap
-	if fs.lastResponse(t).ResponseType != slack.ResponseTypeInChannel {
+	if strings.Contains(fs.lastResponse(t).Text, "limit") {
 		t.Fatalf("first two should succeed")
 	}
 
@@ -394,13 +397,13 @@ func TestPerPersonLimit(t *testing.T) {
 	// Someone else, and other givers, are unaffected.
 	_ = h.HandleSlashCommand(ctx, propsy("UA", "<@UC> fine"))
 	_ = h.HandleSlashCommand(ctx, propsy("UD", "<@UB> fine"))
-	if len(fs.responses) != 5 || fs.lastResponse(t).ResponseType != slack.ResponseTypeInChannel {
+	if len(fs.responses) != 5 || fs.lastResponse(t).ResponseType != slack.ResponseTypeEphemeral {
 		t.Errorf("responses = %+v", fs.responses)
 	}
 
 	now = t0.Add(24*time.Hour + time.Second)
 	_ = h.HandleSlashCommand(ctx, propsy("UA", "<@UB> next day"))
-	if fs.lastResponse(t).ResponseType != slack.ResponseTypeInChannel {
+	if fs.lastResponse(t).ResponseType != slack.ResponseTypeEphemeral {
 		t.Errorf("per-person allowance should reset after the period")
 	}
 }
@@ -444,38 +447,76 @@ func TestHomeShowsAllowanceAndWhenItResets(t *testing.T) {
 	}
 }
 
-func TestAnnounceChannel(t *testing.T) {
+func TestNothingIsPublicByDefault(t *testing.T) {
+	h, fs, _ := newTestHandler(t)
+	_ = h.HandleSlashCommand(context.Background(), propsy("UA", "<@UB> for the help"))
+	for _, p := range fs.posts {
+		if p.channel != "UB" {
+			t.Errorf("posted to %s; only the receiver's DM should go out", p.channel)
+		}
+	}
+	if len(fs.responses) != 1 || fs.responses[0].ResponseType != slack.ResponseTypeEphemeral {
+		t.Errorf("want only a private confirmation, got %+v", fs.responses)
+	}
+}
+
+func TestReceiverIsDMedAfterTheResponse(t *testing.T) {
+	h, fs, _ := newTestHandler(t)
+	follow, err := h.DispatchSlashCommand(context.Background(), propsy("UA", "2 <@UB> for the help"))
+	if err != nil {
+		t.Fatalf("DispatchSlashCommand: %v", err)
+	}
+	if len(fs.posts) != 0 {
+		t.Fatalf("DMs must wait until the response is out, got %+v", fs.posts)
+	}
+	follow()
+	if len(fs.posts) != 1 || fs.posts[0].channel != "UB" || !strings.Contains(fs.posts[0].text, "gave you 2 propsies") {
+		t.Errorf("DM = %+v, want one to UB for 2 propsies", fs.posts)
+	}
+}
+
+func TestDropsyDMsTheReceiver(t *testing.T) {
+	h, fs, _ := newTestHandler(t)
+	_ = h.HandleSlashCommand(context.Background(), dropsy("UA", "<@UB> for being a menace"))
+	if len(fs.posts) != 1 || !strings.Contains(fs.posts[0].text, "gave you a dropsy") {
+		t.Errorf("posts = %+v, want a dropsy DM to UB", fs.posts)
+	}
+}
+
+func TestAnnounceChannelIsOptIn(t *testing.T) {
 	h, fs, _ := newTestHandler(t)
 	h.AnnounceChannel = kudosChannel
 	ctx := context.Background()
 
 	_ = h.HandleSlashCommand(ctx, propsy("UA", "<@UB> for the help"))
-	if len(fs.posts) != 1 || fs.posts[0].channel != kudosChannel || !strings.Contains(fs.posts[0].text, "propsy!") {
-		t.Fatalf("posts = %+v, want one announcement in CKUDOS", fs.posts)
+	var announced bool
+	for _, p := range fs.posts {
+		if p.channel == kudosChannel && strings.Contains(p.text, "propsy!") {
+			announced = true
+		}
 	}
-	if len(fs.responses) != 1 || fs.responses[0].ResponseType != slack.ResponseTypeEphemeral || !strings.Contains(fs.responses[0].Text, "<#CKUDOS>") {
+	if !announced {
+		t.Fatalf("posts = %+v, want the announcement in CKUDOS", fs.posts)
+	}
+	if len(fs.responses) != 1 || fs.responses[0].ResponseType != slack.ResponseTypeEphemeral || !strings.Contains(fs.responses[0].Text, "You gave") {
 		t.Errorf("giver should get a private confirmation, got %+v", fs.responses)
 	}
 }
 
-func TestAnnounceChannelSameAsCurrentChannelPostsInline(t *testing.T) {
-	h, fs, _ := newTestHandler(t)
-	h.AnnounceChannel = "C1" // the channel propsy() runs in
-	_ = h.HandleSlashCommand(context.Background(), propsy("UA", "<@UB> hi"))
-	if len(fs.posts) != 0 || fs.lastResponse(t).ResponseType != slack.ResponseTypeInChannel {
-		t.Errorf("posts=%+v responses=%+v; want a plain in_channel reply", fs.posts, fs.responses)
-	}
-}
-
-func TestAnnounceChannelFailureFallsBack(t *testing.T) {
+func TestAnnounceChannelFailureIsTellTheGiverPrivately(t *testing.T) {
 	h, fs, repo := newTestHandler(t)
 	h.AnnounceChannel = kudosChannel
 	fs.postErr = errors.New("not_in_channel")
 	if err := h.HandleSlashCommand(context.Background(), propsy("UA", "<@UB> hi")); err != nil {
-		t.Fatalf("err = %v, want nil (fallback)", err)
+		t.Fatalf("err = %v, want nil", err)
 	}
-	if r := fs.lastResponse(t); r.ResponseType != slack.ResponseTypeInChannel {
-		t.Errorf("want fallback in_channel announcement, got %+v", r)
+	for _, r := range fs.responses {
+		if r.ResponseType == slack.ResponseTypeInChannel {
+			t.Errorf("a failed announcement must not fall back to a public message")
+		}
+	}
+	if r := fs.lastResponse(t); !strings.Contains(r.Text, "couldn't post") {
+		t.Errorf("giver should be told, got %+v", r)
 	}
 	if st, _ := repo.Stats(context.Background(), "UB"); st.PropsiesReceived != 1 {
 		t.Errorf("the propsy should still be recorded")

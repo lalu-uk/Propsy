@@ -65,6 +65,9 @@ func (h *Handler) formView(ctx context.Context, meta formMeta, delta int, v form
 	who := slack.NewInputBlock(formBlockUsers, plainText("Who?"), nil,
 		slack.NewOptionsMultiSelectBlockElement(slack.MultiOptTypeUser, plainText("Pick people"), formActionUsers).
 			WithInitialUsers(v.users...))
+	// Without dispatch_action, Slack doesn't send block_actions on a selection,
+	// so the allowance lines would never refresh.
+	who.DispatchAction = true
 	count := slack.NewInputBlock(formBlockCount, plainText("How many each? (1 to 5)"), nil,
 		slack.NewPlainTextInputBlockElement(plainText("1"), formActionCount).WithInitialValue(v.count))
 	count.Optional = true
@@ -168,26 +171,35 @@ func (h *Handler) HandleBlockAction(ctx context.Context, cb slack.InteractionCal
 	return err
 }
 
-// HandleViewSubmission records a give form's submission. Slack expects an empty
-// acknowledgement, so this only does the work. Replies go to the response_url
-// carried in the form's metadata.
+// HandleViewSubmission records a give form's submission and sends its DMs.
 func (h *Handler) HandleViewSubmission(ctx context.Context, cb slack.InteractionCallback) error {
+	f, err := h.DispatchViewSubmission(ctx, cb)
+	if f != nil {
+		f()
+	}
+	return err
+}
+
+// DispatchViewSubmission records a give form's submission. Slack expects an
+// empty acknowledgement, so transports respond first and then run the returned
+// follow-up (the DMs). Replies go to the response_url in the form's metadata.
+func (h *Handler) DispatchViewSubmission(ctx context.Context, cb slack.InteractionCallback) (Followup, error) {
 	if cb.View.CallbackID != formCallbackID {
-		return nil
+		return nil, nil
 	}
 	meta, delta, err := parseFormMeta(cb.View.PrivateMetadata)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	v := formValuesFrom(cb.View.State)
 	cmd := slack.SlashCommand{Command: meta.Command, UserID: cb.User.ID, ChannelID: meta.ChannelID, ResponseURL: meta.ResponseURL}
 
 	count, err := parseFormCount(v.count)
 	if err != nil {
-		return h.ephemeral(ctx, cmd, err.Error())
+		return nil, h.ephemeral(ctx, cmd, err.Error())
 	}
 	if len(v.users) == 0 {
-		return h.ephemeral(ctx, cmd, "Pick at least one person to give one to.")
+		return nil, h.ephemeral(ctx, cmd, "Pick at least one person to give one to.")
 	}
 	reason := v.reason
 	if r := []rune(reason); len(r) > maxReasonRunes {

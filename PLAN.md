@@ -6,8 +6,8 @@ A single static Go binary: a Slack bot for giving kudos, called **propsies** (si
 *propsy*), and, opt-in, taking them away with **dropsies** (singular: *dropsy*). The
 vocabulary is fixed: "1 propsy", "5 propsies", "1 dropsy", "5 dropsies", everywhere.
 
-- `/propsy @alice @bob for unblocking the release` → public announcement; each recipient
-  gets a propsy.
+- `/propsy @alice @bob for unblocking the release` → private confirmation to the giver; a DM to each recipient; public only if an announce channel is configured.
+  Each recipient gets a propsy.
 - **App Home** dashboard: your totals (`Received: 5 propsies, 10 dropsies` /
   `Given: 3 propsies, 5 dropsies`; dropsies are hidden while zero), your remaining allowance,
   two all-time **leaderboards** that list everyone (no top-N): *received* (everyone who has
@@ -55,17 +55,20 @@ Single-workspace by design (bot token from env) — self-hosted per workspace.
   opened, never pushed after a command: a live refresh of the giver and every recipient meant
   up to 11 sequential `views.publish` calls on the 3 s ack path, and a tab is rebuilt on
   reopen anyway. The only staleness is a tab someone is already staring at.
-- Replies use the command's `response_url` (`in_channel` announcement, `ephemeral` errors).
-  Unlike `chat.postMessage`, it works in channels the bot hasn't been invited to.
-- **Announce channel** (`PROPSY_ANNOUNCE_CHANNEL`, optional): announcements go there via
-  `chat.postMessage` instead, and the giver gets an ephemeral "Posted in #channel". Slack
-  accepts a channel ID (recommended; the only thing that works for private channels, and
-  survives renames) or a `#name` for public channels, so we pass the value straight
-  through with no lookup (a name→ID lookup would need `channels:read`). The bot must be in
-  the channel (or hold `chat:write.public`, which we don't request). If posting fails, or
-  the announce channel is the channel the command ran in, we use the `response_url` path,
-  so a misconfiguration degrades to the default behaviour rather than losing the message.
-- Scopes: bot `commands` and `chat:write` (the latter only for the announce channel)
+- Replies use the command's `response_url`, always `ephemeral`: the giver's confirmation, and
+  errors. Nothing is posted publicly by default. Unlike `chat.postMessage`, it works in channels
+  the bot hasn't been invited to.
+- **Receivers** get a DM (`chat.postMessage` with the receiver's user ID as the channel, which
+  needs `im:write`), one per person per batch, for propsies and dropsies alike. DMs are sent
+  after the response is written (`Followup`, run inside the same request in webhook mode), so
+  they stay off the 3 s ack path. A failed DM is logged and doesn't affect the give.
+- **Announce channel** (`PROPSY_ANNOUNCE_CHANNEL`, optional, opt-in): the public announcement goes
+  there via `chat.postMessage`. Slack accepts a channel ID (recommended; the only thing that
+  works for private channels, and survives renames) or a `#name` for public channels, so we pass
+  the value straight through with no lookup (a name→ID lookup would need `channels:read`). The bot
+  must be in the channel (or hold `chat:write.public`, which we don't request). If posting fails,
+  the giver is told privately and nothing goes public instead.
+- Scopes: bot `commands`, `chat:write` (the announce channel), and `im:write` (receiver DMs)
   (+ app-level `connections:write` in socket mode).
   Manifests: `slack/manifest.socket.yaml`, `slack/manifest.http.yaml`.
 
