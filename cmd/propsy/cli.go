@@ -8,9 +8,9 @@ import (
 const usageText = `Propsy is a self-hosted kudos bot for Slack: /propsy gives one, /dropsy takes one away.
 
 Usage:
-  Propsy              run the bot (configured by environment variables)
-  Propsy --help       show this help
-  Propsy --version    show the version
+  propsy              run the bot (configured by environment variables)
+  propsy --help       show this help
+  propsy --version    show the version
 
 The mode comes from ENVIRONMENT:
   local (default)  Socket Mode, data in a JSON file (DB_PATH). Needs SLACK_BOT_TOKEN, SLACK_APP_TOKEN.
