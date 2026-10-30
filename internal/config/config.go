@@ -44,7 +44,7 @@ type Config struct {
 	// adjusted, say) for the caller to log.
 	Warnings []string
 
-	// AnnounceChannel, if set, is where propsies/dropsies are announced
+	// AnnounceChannel, if set, is where Propsies/Dropsies are announced
 	// instead of the channel the command was run in: a channel ID (C0123…,
 	// recommended) or #name (public channels only).
 	AnnounceChannel string

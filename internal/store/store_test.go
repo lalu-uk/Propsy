@@ -288,7 +288,7 @@ func testBoards(t *testing.T, r Repository, uniq string) {
 	got, order = ours(BoardGiven)
 	if len(got) != 3 || got[p] != 2 || got[q] != 1 || got[rr] != 1 ||
 		order[0].UserID != p || order[1].UserID != q || order[2].UserID != rr {
-		t.Errorf("given board = %+v; want p:2, then q:1 and r:1 in user ID order (dropsies given count too), and not s", order)
+		t.Errorf("given board = %+v; want p:2, then q:1 and r:1 in user ID order (Dropsies given count too), and not s", order)
 	}
 
 	if top, err := r.Leaderboard(ctx, BoardGiven, 1); err != nil || len(top) != 1 {
