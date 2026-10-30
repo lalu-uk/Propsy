@@ -17,7 +17,7 @@ func TestCLI(t *testing.T) {
 		{"no args runs the bot", nil, -1, "", ""},
 		{"help", []string{"--help"}, 0, "Usage:", ""},
 		{"short help", []string{"-h"}, 0, "Usage:", ""},
-		{"version", []string{"--version"}, 0, "Propsy " + version, ""},
+		{"version", []string{"--version"}, 0, "propsy " + version, ""},
 		{"unknown argument", []string{"--bogus"}, 2, "", `unknown argument "--bogus"`},
 	}
 	for _, tt := range tests {

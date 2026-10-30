@@ -19,7 +19,7 @@ features:
       description: Hey that was cool thx
       usage_hint: "[count] @someone for that thing"
       should_escape: true # required: delivers mentions as <@U123|name>
-    # Optional: lets people subtract propsies for the lulz. Only use this manifest
+    # Optional: lets people subtract Propsies. Only use this manifest
     # if that fits your culture; the default manifest has no /dropsy.
     - command: /dropsy
       description: I didn't like that thing

@@ -18,7 +18,7 @@ type Action struct {
 	To        string    `firestore:"to" json:"to"`               // Slack user ID of the receiver
 	Reason    string    `firestore:"reason" json:"reason"`       // free text, may be empty
 	ChannelID string    `firestore:"channelId" json:"channelId"` // channel the command was run in
-	Delta     int       `firestore:"delta" json:"delta"`         // +1 (propsy) or -1 (dropsy)
+	Delta     int       `firestore:"delta" json:"delta"`         // +1 (Propsy) or -1 (Dropsy)
 	CreatedAt time.Time `firestore:"createdAt" json:"createdAt"`
 }
 
@@ -46,7 +46,7 @@ const (
 	// negative).
 	BoardReceived Board = iota + 1
 	// BoardGiven ranks everyone who has given a Propsy or Dropsy by how many
-	// they've given in total (propsies and Dropsies both count).
+	// they've given in total (Propsies and Dropsies both count).
 	BoardGiven
 )
 

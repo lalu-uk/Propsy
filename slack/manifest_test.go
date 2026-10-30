@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-// normalize drops comments and the /dropsy command block so a dropsy variant
+// normalize drops comments and the /dropsy command block so a Dropsy variant
 // can be compared against its base manifest.
 func normalize(t *testing.T, path string) string {
 	t.Helper()
@@ -31,7 +31,7 @@ func normalize(t *testing.T, path string) string {
 	return strings.Join(out, "\n")
 }
 
-// The dropsy variants must differ from the default manifests only by the
+// The Dropsy variants must differ from the default manifests only by the
 // /dropsy command, so the two copies can't silently drift apart.
 func TestDropsyManifestsMatchBase(t *testing.T) {
 	for _, mode := range []string{"socket", "http"} {

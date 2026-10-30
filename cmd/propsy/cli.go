@@ -35,7 +35,7 @@ func cli(args []string, stdout, stderr io.Writer) int {
 		_, _ = fmt.Fprint(stdout, usageText)
 		return 0
 	case "-v", "--version", "version":
-		_, _ = fmt.Fprintf(stdout, "Propsy %s\n", version)
+		_, _ = fmt.Fprintf(stdout, "propsy %s\n", version)
 		return 0
 	default:
 		_, _ = fmt.Fprintf(stderr, "propsy: unknown argument %q\n\n%s", args[0], usageText)
