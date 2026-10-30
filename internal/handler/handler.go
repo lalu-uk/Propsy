@@ -302,7 +302,7 @@ func (h *Handler) PublishHome(ctx context.Context, userID string) error {
 		return err
 	}
 	// Fetch enough rows for recentCount batches: a batch can be up to
-	// maxPerRecipient rows, one per propsy.
+	// maxPerRecipient rows, one per Propsy.
 	recent, err := h.Store.Recent(ctx, userID, recentCount*maxPerRecipient)
 	if err != nil {
 		return err
