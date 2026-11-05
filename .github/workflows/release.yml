@@ -137,7 +137,7 @@ jobs:
       # cosign signs checksums.txt and the image keylessly, and Syft writes each
       # archive's SBOM from its build hook (see `signs`, `builds.hooks` and
       # `docker_signs` in .goreleaser.yaml). Both must be on PATH before GoReleaser runs.
-      - uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+      - uses: sigstore/cosign-installer@756fe2d284c7292c4e9b62c8a28f1e5629c59532 # v4.1.3
       - uses: anchore/sbom-action/download-syft@66cbf4bc1f1c0d2edc94016e65bc221b6bb0ad6c # v0.24.3
 
       # Cross-compiles binaries for linux/darwin/windows x amd64/arm64 (see
