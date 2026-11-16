@@ -1,5 +1,5 @@
 [tools]
-[tools."aqua:goreleaser/goreleaser"]
+[tools."github:goreleaser/goreleaser"]
 version = "2.19.0"
 [tools."core:go"]
 version = "1.27.3"
