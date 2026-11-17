@@ -2,8 +2,8 @@ name: CI
 
 on:
   pull_request:
-    # Only run when something that can actually affect `go test`/
-    # golangci-lint changed. Deliberately NOT applied to the `push` trigger
+    # Run for Go test/lint inputs and container/release configuration changes.
+    # Deliberately NOT applied to the `push` trigger
     # below: the release-please PR (see release.yml) only ever touches
     # CHANGELOG.md, and Release only fires via workflow_run after *this*
     # workflow completes on main — path-filtering push here would mean
@@ -14,7 +14,10 @@ on:
       - "go.sum"
       - "slack/manifest.*.yaml"
       - ".golangci.yaml"
+      - "Dockerfile"
+      - ".goreleaser.yaml"
       - ".github/workflows/ci.yml"
+      - ".github/workflows/release.yml"
       - "firestore.sh"
   push:
     branches: [main]
@@ -25,6 +28,7 @@ permissions:
 jobs:
   lint:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
@@ -36,6 +40,7 @@ jobs:
 
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
@@ -60,8 +65,8 @@ jobs:
           source ./firestore.sh start
           echo "FIRESTORE_EMULATOR_HOST=${FIRESTORE_EMULATOR_HOST}" >> "$GITHUB_ENV"
 
-      - name: go test ./...
-        run: go test ./...
+      - name: go test -race ./...
+        run: go test -race ./...
 
       - name: Firestore emulator log
         if: failure()
