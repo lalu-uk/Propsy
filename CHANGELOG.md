@@ -1,5 +1,13 @@
 # Changelog
 
+## [4.3.1](https://github.com/lalu-uk/Propsy/compare/v4.3.0...v4.3.1) (2026-11-17)
+
+
+### Bug Fixes
+
+* **deps:** update module google.golang.org/api to v0.315.0 ([ed10900](https://github.com/lalu-uk/Propsy/commit/ed10900c27c3a0965020bd0253011a109da47e29))
+* **handler:** limit slash command recipients to leading mentions ([cd66a54](https://github.com/lalu-uk/Propsy/commit/cd66a54b7e2b10559481236f2210023c1b2c3896))
+
 ## [4.3.0](https://github.com/lalu-uk/Propsy/compare/v4.2.0...v4.3.0) (2026-10-30)
 
 
