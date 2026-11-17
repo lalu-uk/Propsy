@@ -58,23 +58,10 @@ Run). See `PLAN.md` for design and roadmap.
   `response_url` reply in the current channel.
 - Webhook handling is synchronous (response = ack, 3 s limit).
 - The slash commands rely on `should_escape: true` to get `<@U…>` mentions.
-
-## Committing (agents)
-
-This assumes the owner has a git alias `agent-commit` configured (see CONTRIBUTING.md, "AI-assisted
-commits"). Commit with it, not plain `git commit`, setting the model on every commit:
-
-```sh
-AGENT_MODEL="<provider>/<model>" git agent-commit -m "type(scope): subject"
-```
-
-`AGENT_MODEL` is the model you're actually running as (provider/model ID, as in your system
-prompt's model info). The alias takes the same arguments as `git commit`, signs with a dedicated
-agent key, and adds a `Co-authored-by: OpenCode <version> (<model>) <noreply@…>` trailer. If the alias is missing,
-don't fall back to plain `git commit` (signing may need the owner to touch a hardware key); ask.
-
-If a `gh` remote exists, fetch and push through it rather than `origin`. Only commit or push when
-asked, and open a PR instead of pushing to `main`.
+- Slash command recipients are only the leading group of mentions after the optional count.
+  Words or punctuation end that group; later mentions belong to the reason. Keep the reason
+  unchanged, including `for` and `because`, except for leading separator whitespace and the
+  500-character limit. Never scan the whole message for recipients.
 
 ## Releases
 

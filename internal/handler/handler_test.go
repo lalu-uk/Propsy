@@ -112,10 +112,18 @@ func TestParseCommand(t *testing.T) {
 	}{
 		{"", nil, ""},
 		{"just words", nil, "just words"},
-		{"<@U1|alice> for the help", []string{"U1"}, "the help"},
+		{"<@U1|alice> for the help", []string{"U1"}, "for the help"},
 		{"<@U1> <@W2|bob> great work", []string{"U1", "W2"}, "great work"},
 		{"<@U1> <@U1> twice", []string{"U1"}, "twice"},
-		{"thanks <@U1> for fixing prod", []string{"U1"}, "thanks  for fixing prod"},
+		{"thanks <@U1> for fixing prod", nil, "thanks <@U1> for fixing prod"},
+		{"<@U1> for xyz because <@U2|jade> is cool", []string{"U1"}, "for xyz because <@U2|jade> is cool"},
+		{"<@U1> because <@U2> says so <@U3>", []string{"U1"}, "because <@U2> says so <@U3>"},
+		{"<@U1>, <@U2> thanks", []string{"U1"}, ", <@U2> thanks"},
+		{"<@U1> and <@U2> thanks", []string{"U1"}, "and <@U2> thanks"},
+		{"<@U1><@U2>", []string{"U1", "U2"}, ""},
+		{" \t<@U1>\n <@W2|bob>\t because  you're cool!\nThanks.  ", []string{"U1", "W2"}, "because  you're cool!\nThanks.  "},
+		{"<@U1> for <@U1> again", []string{"U1"}, "for <@U1> again"},
+		{"<@U1> 2 for shipping", []string{"U1"}, "2 for shipping"},
 		{"<@U1> " + strings.Repeat("x", 600), []string{"U1"}, strings.Repeat("x", maxReasonRunes)},
 	}
 	for _, tt := range tests {
@@ -168,6 +176,47 @@ func TestGivePropsies(t *testing.T) {
 	}
 	if len(fs.published) != 0 {
 		t.Errorf("giving must not publish Home tabs (they're built when opened), published %d", len(fs.published))
+	}
+}
+
+func TestReasonMentionsAreNotRecipients(t *testing.T) {
+	for _, command := range []string{commandPropsy, commandDropsy} {
+		for _, count := range []int{1, 5} {
+			t.Run(fmt.Sprintf("%s/%d", command, count), func(t *testing.T) {
+				h, fs, repo := newTestHandler(t)
+				ctx := context.Background()
+				const reason = "for xyz because <@UJADE|jade> is cool  "
+				text := "<@UEMILY|emily> " + reason
+				if count > 1 {
+					text = fmt.Sprintf("%d %s", count, text)
+				}
+				cmd := propsy("UGIVER", text)
+				cmd.Command = command
+				if err := h.HandleSlashCommand(ctx, cmd); err != nil {
+					t.Fatal(err)
+				}
+				entries, err := repo.Recent(ctx, "UEMILY", 10)
+				if err != nil || len(entries) != count {
+					t.Fatalf("Emily's actions = %+v, %v; want %d", entries, err, count)
+				}
+				delta, _, _ := commandDelta(command)
+				for _, entry := range entries {
+					if entry.Reason != reason || entry.Delta != delta {
+						t.Errorf("action = %+v; want reason %q, delta %d", entry, reason, delta)
+					}
+				}
+				st, err := repo.Stats(ctx, "UJADE")
+				if err != nil || st.PropsiesReceived != 0 || st.DropsiesReceived != 0 {
+					t.Errorf("Jade's stats = %+v, %v; want no awards", st, err)
+				}
+				if len(fs.posts) != 1 || fs.posts[0].channel != "UEMILY" || !strings.Contains(fs.posts[0].text, reason) {
+					t.Errorf("DMs = %+v; want only Emily, with unchanged reason", fs.posts)
+				}
+				if got := fs.lastResponse(t).Text; !strings.Contains(got, reason) {
+					t.Errorf("confirmation = %q; want unchanged reason %q", got, reason)
+				}
+			})
+		}
 	}
 }
 
@@ -534,7 +583,9 @@ func TestParseCount(t *testing.T) {
 		{shipping, 1, shipping, false},
 		{"2 <@UA> for shipping", 2, "<@UA> for shipping", false},
 		{"5 <@UA>", 5, "<@UA>", false},
-		{"  3   <@UA>  ", 3, "<@UA>", false},
+		{"  3   <@UA>  ", 3, "<@UA>  ", false},
+		{"2\t<@UA> because  cool  ", 2, "<@UA> because  cool  ", false},
+		{"<@UA> for cool  ", 1, "<@UA> for cool  ", false},
 		{"<@UA> 2 for shipping", 1, "<@UA> 2 for shipping", false},
 		{"0 <@UA>", 0, "", true},
 		{"6 <@UA>", 0, "", true},
