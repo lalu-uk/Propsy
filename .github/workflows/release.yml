@@ -93,7 +93,7 @@ jobs:
           echo "No successful CI run found for release commit ${release_sha}" >&2
           exit 1
 
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
         with:
           go-version-file: go.mod
           # Off: setup-go caches once per go.sum, from whichever job got there
