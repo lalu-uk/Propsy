@@ -48,6 +48,11 @@ Single-workspace by design (bot token from env) — self-hosted per workspace.
 - Counts: a leading whole number (1 to 5, default 1) is how many Propsies to give each person,
   stored as N action rows so each counts against the limits. A leading number is always the
   count; the form's count field does the same, with no default.
+- Recipients are only the initial group of mentions after the optional count, with whitespace
+  allowed between mentions. The first non-mention text starts the reason, and later mentions
+  are never recipients. Preserve the reason unchanged (including `for`, `because`, and mentions),
+  except for leading separator whitespace and the 500-character limit. Commands that previously
+  placed words or punctuation before or between recipients must move recipients to the start.
 - The form refreshes on a people selection (`block_actions` → `views.update`), showing each
   picked person's per-person allowance left. A single `views.update` per selection change, no
   store writes; one `PairAllowance` read per person picked.

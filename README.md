@@ -9,6 +9,13 @@ Self-hosted, scale-to-zero **kudos for Slack**, as a single static Go binary.
 - `/propsy @alice @bob for unblocking the release` gives each of them a Propsy. You get a private confirmation, and each of them gets a DM. Nothing is posted publicly unless `PROPSY_ANNOUNCE_CHANNEL` is set.
 - `/propsy 5 @alice for unblocking the release` gives Alice five. The optional leading number is
   the count for each person, from 1 to 5 (the default is 1), and each one counts against the limits.
+- Recipients must come first, after the optional count. Only the initial group of mentions
+  counts: `/propsy @Emily for xyz because @Jade is cool` gives only Emily 1 Propsy.
+  Words or punctuation end the recipient list; later mentions stay in the reason. The reason
+  is kept unchanged (including `for` and `because`), except for separator whitespace before it
+  and the existing 500-character limit. This also applies to `/dropsy`.
+  **Changed command syntax:** if you previously put words or punctuation before or between
+  recipients, move all recipients to the start and separate them with spaces.
 - `/propsy` on its own opens a form to pick people, how many each (1 to 5, default 1), and a
   reason. Once people are picked, it shows how much of each person's per-person allowance is left.
 - The app's **Home** tab shows your Propsy and Dropsy totals, how many you have left to give, two

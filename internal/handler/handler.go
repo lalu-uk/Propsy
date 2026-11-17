@@ -13,6 +13,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/laluowen/Propsy/internal/store"
 	"github.com/slack-go/slack"
@@ -96,7 +97,7 @@ func New(s SlackAPI, repo store.Repository) *Handler {
 
 // Slack's escaped mention formats: <@U123> and <@U123|name>. Requires the
 // slash command's "Escape channels, users, and links" setting.
-var mentionRE = regexp.MustCompile(`<@([UW][A-Z0-9]+)(?:\|[^>]*)?>`)
+var mentionRE = regexp.MustCompile(`^<@([UW][A-Z0-9]+)(?:\|[^>]*)?>`)
 
 const (
 	commandPropsy = "/propsy"
@@ -151,8 +152,11 @@ func (h *Handler) DispatchSlashCommand(ctx context.Context, cmd slack.SlashComma
 // maxPerRecipient. Without one the count is 1. A leading number is always the
 // count, so a reason can't start with one.
 func parseCount(text string) (count int, rest string, err error) {
-	text = strings.TrimSpace(text)
-	first, after, _ := strings.Cut(text, " ")
+	text = strings.TrimLeftFunc(text, unicode.IsSpace)
+	first, after := text, ""
+	if i := strings.IndexFunc(text, unicode.IsSpace); i >= 0 {
+		first, after = text[:i], text[i:]
+	}
 	if first == "" || !isDigits(first) {
 		return 1, text, nil
 	}
@@ -160,7 +164,7 @@ func parseCount(text string) (count int, rest string, err error) {
 	if convErr != nil || n < 1 || n > maxPerRecipient {
 		return 0, "", fmt.Errorf("the count must be from 1 to %d, not `%s`", maxPerRecipient, first)
 	}
-	return n, strings.TrimSpace(after), nil
+	return n, strings.TrimLeftFunc(after, unicode.IsSpace), nil
 }
 
 func isDigits(s string) bool {
@@ -393,18 +397,24 @@ func (h *Handler) ephemeral(ctx context.Context, cmd slack.SlashCommand, text st
 	})
 }
 
-// parseCommand extracts the unique mentioned user IDs (in order) and the
-// remaining text as the reason.
+// parseCommand consumes only the leading group of mentions, returning unique
+// user IDs in order. After separator whitespace, the reason is preserved unchanged
+// up to maxReasonRunes; mentions in the reason are not recipients.
 func parseCommand(text string) (users []string, reason string) {
 	seen := map[string]bool{}
-	for _, m := range mentionRE.FindAllStringSubmatch(text, -1) {
+	for {
+		text = strings.TrimLeftFunc(text, unicode.IsSpace)
+		m := mentionRE.FindStringSubmatch(text)
+		if m == nil {
+			break
+		}
 		if !seen[m[1]] {
 			seen[m[1]] = true
 			users = append(users, m[1])
 		}
+		text = text[len(m[0]):]
 	}
-	reason = strings.TrimSpace(mentionRE.ReplaceAllString(text, ""))
-	reason = strings.TrimSpace(strings.TrimPrefix(reason, "for "))
+	reason = text
 	if r := []rune(reason); len(r) > maxReasonRunes {
 		reason = string(r[:maxReasonRunes])
 	}
