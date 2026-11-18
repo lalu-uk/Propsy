@@ -102,7 +102,7 @@ release:
 # https://goreleaser.com/customization/package/dockers_v2/
 dockers_v2:
   - images:
-      - ghcr.io/lalu-uk/propsy
+      - ghcr.io/laluowen/propsy
     # Exact version only: no "latest" (or floating "1"/"1.2") tag, since a tag
     # that moves isn't immutable. ghcr can't enforce tag immutability itself, so
     # this is by convention, backed by the cosign signature: verify it, or pin

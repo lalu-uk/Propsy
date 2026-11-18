@@ -208,7 +208,7 @@ share a rank. No composite index is needed anywhere.
 - Secrets (`SLACK_BOT_TOKEN`, `SLACK_SIGNING_SECRET`) from Secret Manager; runtime service
   account gets `roles/datastore.user` only. `GCP_PROJECT_ID` set as env.
 - Image source: Cloud Run deploys the public image straight from ghcr
-  (`gcloud run deploy --image=ghcr.io/lalu-uk/propsy:vX.Y.Z`); no extra registry needed. Deploy
+  (`gcloud run deploy --image=ghcr.io/laluowen/propsy:vX.Y.Z`); no extra registry needed. Deploy
   an exact version, since there's no `latest`.
 - Image tags: only the exact version is pushed (no `latest`, no floating `1`/`1.2`). ghcr has
   **no tag-immutability setting** (a feature request is open and unanswered), so that's by
@@ -236,7 +236,8 @@ share a rank. No composite index is needed anywhere.
   fakes; webhook tests drive real handler over `httptest` with hand-computed Slack
   signatures. No live Slack/GCP calls.
 - **CI:** golangci-lint v2 + tests with emulator, on PRs and `main`.
-- **Release (built for GitHub immutable releases, which this org enforces):** a published
+- **Release (built for GitHub immutable releases):** confirm this policy is enforced for the new
+  owner before its first release. A published
   release's assets and tag are frozen, so everything must be attached before it's published.
   1. Merging release-please's PR makes it push the tag and create a **draft** release with its
      notes (`release-please-config.json`: `"draft": true` plus `"force-tag-creation": true`;
@@ -262,7 +263,7 @@ share a rank. No composite index is needed anywhere.
   matrix build isn't worth it: GoReleaser's split/merge is Pro-only, and replicating checksums,
   SBOMs, signing and the draft-then-publish upload by hand would save less than caching does.
 - **README versions are release-managed.** The install instructions (mise pin, binary URL,
-  `ghcr.io/lalu-uk/propsy:<version>`, Cloud Run deploy, verification examples) show the current
+  `ghcr.io/laluowen/propsy:<version>`, Cloud Run deploy) show the current
   version. release-please's generic updater rewrites them inside the release PR
   (`extra-files` in `release-please-config.json` plus `x-release-please-*` markers in README.md),
   so there's no extra post-release step, and the README at a release's tag names that same
@@ -285,10 +286,12 @@ share a rank. No composite index is needed anywhere.
     artifact, provenance says which workflow run built it from which commit.
   - The job runs with only the permissions it needs (`id-token`, `attestations`, `packages`,
     `contents`); the workflow default is none.
-  - **Verification identity.** The release workflow is triggered by `workflow_run`, so the
-    certificate's workflow ref is the default branch (`…/release.yml@refs/heads/main`), not
-    the tag. Verifiers should match the repo + workflow path with a regexp and not pin a ref
-    (see README).
+  - **Verification identity.** Releases through v4.3.0 were signed by
+    `lalu-uk/Propsy`; releases after v4.3.0 use `laluowen/Propsy`. Mirroring historical image tags
+    does not change their original signer or provenance. In either repository, the release workflow
+    is triggered by `workflow_run`, so the certificate's workflow ref is the default branch
+    (`…/release.yml@refs/heads/main`), not the tag. Verifiers should match the correct repository
+    + workflow path with a regexp and not pin a ref (see README).
   - Signing needs a GitHub OIDC token, so it only works in CI; local snapshot builds use
     `--skip=sign` (and `docker` if you have no buildx; syft must be on PATH for the SBOM hook).
   - Signing happens inside the GoReleaser run, before the draft is published, so the signature
