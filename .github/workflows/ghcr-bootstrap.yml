@@ -1,0 +1,58 @@
+name: GHCR bootstrap rehearsal
+
+on:
+  push:
+    branches: [ops/ghcr-bootstrap]
+    paths: [.github/workflows/ghcr-bootstrap.yml]
+
+permissions: {}
+
+jobs:
+  copy:
+    if: github.repository == 'laluowen/Propsy' && github.actor == 'laluowen'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      packages: write
+    steps:
+      - name: Install ORAS
+        run: |
+          archive="$RUNNER_TEMP/oras.tar.gz"
+          curl --fail --silent --show-error --location \
+            https://github.com/oras-project/oras/releases/download/v1.4.0/oras_1.4.0_linux_amd64.tar.gz \
+            --output "$archive"
+          echo "d8e1dce2fd8ce996f1d901845b688eb0cf505a6082897606f053825bb47935d1  $archive" | sha256sum --check
+          tar -xzf "$archive" -C "$RUNNER_TEMP" oras
+
+      - name: Copy the earliest signed multi-arch image
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          oras="$RUNNER_TEMP/oras"
+          source_config="$RUNNER_TEMP/anonymous.json"
+          target_config="$RUNNER_TEMP/ghcr.json"
+          echo '{"auths":{}}' > "$source_config"
+          printf '%s' "$GH_TOKEN" | "$oras" login --registry-config "$target_config" \
+            --username "$GITHUB_ACTOR" --password-stdin ghcr.io
+
+          source=ghcr.io/lalu-uk/propsy
+          target=ghcr.io/laluowen/propsy-bootstrap-test
+          version=v1.2.0
+          digest=sha256:5911c0a408259ab65c8b0763dddabdcd056c0eaacac7ad90b6c7a7355e4a7f82
+          signature=sha256:bc150ee85b26c559e5343d0b5a64aa02394b4ffae76eec4f6557245b5fe7ba4a
+
+          "$oras" cp -r --concurrency 1 --from-registry-config "$source_config" \
+            --to-registry-config "$target_config" "$source@$digest" "$target:$version"
+          "$oras" discover --registry-config "$target_config" --format json --depth 1 "$target:$version" |
+            jq -e --arg digest "$digest" --arg signature "$signature" \
+              '.digest == $digest and ([.referrers[].digest] == [$signature])'
+
+      - name: Check GitHub repository linkage
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if result=$(gh api /users/laluowen/packages/container/propsy-bootstrap-test); then
+            jq '{name,visibility,linked_repository:.repository.full_name}' <<< "$result"
+          else
+            echo 'Package API unavailable to this workflow token; check the package settings for Repository source.'
+          fi
