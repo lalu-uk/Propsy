@@ -30,7 +30,7 @@ Self-hosted, scale-to-zero **kudos for Slack**, as a single static Go binary.
 
 Latest release: **v4.3.0** <!-- x-release-please-version -->
 
-See the [releases page](https://github.com/lalu-uk/Propsy/releases) for notes.
+See the [releases page](https://github.com/laluowen/Propsy/releases) for notes.
 
 <!-- Everything between the start and end markers is bumped to each new version by release-please
      (see release-please-config.json). Keep other version-like numbers out of the marked blocks. -->
@@ -41,8 +41,8 @@ See the [releases page](https://github.com/lalu-uk/Propsy/releases) for notes.
 
 <!-- x-release-please-start-version -->
 ```sh
-mise use -g github:lalu-uk/Propsy@latest   # the newest release
-mise use -g github:lalu-uk/Propsy@4.3.0    # or pin this exact version
+mise use -g github:laluowen/Propsy@latest   # the newest release
+mise use -g github:laluowen/Propsy@4.3.0    # or pin this exact version
 ```
 <!-- x-release-please-end -->
 
@@ -59,8 +59,8 @@ Each release has one archive per platform: `propsy_{linux,darwin}_{amd64,arm64}.
 <!-- x-release-please-start-version -->
 ```sh
 # linux/amd64 shown
-curl -fsSLO https://github.com/lalu-uk/Propsy/releases/download/v4.3.0/propsy_linux_amd64.tar.gz
-curl -fsSLO https://github.com/lalu-uk/Propsy/releases/download/v4.3.0/checksums.txt
+curl -fsSLO https://github.com/laluowen/Propsy/releases/download/v4.3.0/propsy_linux_amd64.tar.gz
+curl -fsSLO https://github.com/laluowen/Propsy/releases/download/v4.3.0/checksums.txt
 grep ' propsy_linux_amd64.tar.gz$' checksums.txt | sha256sum -c -   # macOS: shasum -a 256 -c -
 tar -xzf propsy_linux_amd64.tar.gz
 ```
@@ -70,7 +70,7 @@ tar -xzf propsy_linux_amd64.tar.gz
 
 <!-- x-release-please-start-version -->
 ```sh
-docker pull ghcr.io/lalu-uk/propsy:v4.3.0
+docker pull ghcr.io/laluowen/propsy:v4.3.0
 ```
 <!-- x-release-please-end -->
 
@@ -148,7 +148,7 @@ version: there's no `latest`):
 
 <!-- x-release-please-start-version -->
 ```sh
-gcloud run deploy propsy --image=ghcr.io/lalu-uk/propsy:v4.3.0 --region=<region> ... \
+gcloud run deploy propsy --image=ghcr.io/laluowen/propsy:v4.3.0 --region=<region> ... \
   --startup-probe=httpGet.path=/healthz,httpGet.port=8080,periodSeconds=5,failureThreshold=12,timeoutSeconds=3 \
   --liveness-probe=httpGet.path=/healthz,httpGet.port=8080,periodSeconds=15,failureThreshold=3,timeoutSeconds=5 \
   --readiness-probe=httpGet.path=/readyz,httpGet.port=8080,periodSeconds=30,failureThreshold=2,timeoutSeconds=3
@@ -180,18 +180,26 @@ See [`CONTRIBUTING.md`](./CONTRIBUTING.md) for the contribution workflow.
 ## Releases
 
 Releases: Conventional Commits → release-please PR → GoReleaser publishes archives and a
-versioned image, `ghcr.io/lalu-uk/propsy:vX.Y.Z`. There is deliberately no `latest` tag (or
-floating `1` / `1.2`): pin an exact version, or better its digest.
+versioned image, `ghcr.io/laluowen/propsy:vX.Y.Z`. The image repository changed from
+`ghcr.io/lalu-uk/propsy` when the project moved. Historical image tags are mirrored to the new
+repository with their original digests and signatures. Mirroring does not change the release
+workflow identity that signed an image. There is deliberately no `latest` tag (or floating
+`1` / `1.2`): pin an exact version, or better its digest.
 
 ### Verifying a release
 
 `checksums.txt` is signed with [cosign](https://github.com/sigstore/cosign) using Sigstore
 **keyless** signing, so there are no keys to trust or rotate: the signature proves the file was
-produced by this repository's release workflow. It lists the sha256 of every archive, and each
-archive holds its SBOM, so verifying it covers the whole release. The bundle is
+produced by the named repository's release workflow. It lists the sha256 of every archive, and
+each archive holds its SBOM, so verifying it covers the whole release. The bundle is
 `checksums.txt.sigstore.json` on the release.
 
-<!-- x-release-please-start-version -->
+#### v4.3.0 and earlier
+
+For signed releases in this range, keep using the `lalu-uk/Propsy` workflow identity, including
+for mirrored images such as `v4.3.0` below. GitHub's API no longer serves the historical build
+attestations after the transfer. The Cosign signatures are separate and still verify as shown.
+
 ```sh
 # checksums.txt, then the archive against it:
 cosign verify-blob checksums.txt \
@@ -202,23 +210,42 @@ cosign verify-blob checksums.txt \
 grep ' propsy_linux_amd64.tar.gz$' checksums.txt | sha256sum -c -
 
 # The container image (best: verify, then pin the digest it resolves to):
-cosign verify ghcr.io/lalu-uk/propsy:v4.3.0 \
+cosign verify ghcr.io/laluowen/propsy:v4.3.0 \
   --certificate-identity-regexp '(?i)^https://github\.com/lalu-uk/propsy/\.github/workflows/release\.yml@' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com
+```
+
+#### Releases after v4.3.0
+
+These releases are signed by the `laluowen/Propsy` workflow. Replace `vX.Y.Z` with the exact
+release tag. The workflow identity is intentionally separate from the historical identity above:
+
+```sh
+# checksums.txt, then the archive against it:
+cosign verify-blob checksums.txt \
+  --bundle checksums.txt.sigstore.json \
+  --certificate-identity-regexp '(?i)^https://github\.com/laluowen/propsy/\.github/workflows/release\.yml@' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com
+grep ' propsy_linux_amd64.tar.gz$' checksums.txt | sha256sum -c -
+
+# The container image (best: verify, then pin the digest it resolves to):
+cosign verify ghcr.io/laluowen/propsy:vX.Y.Z \
+  --certificate-identity-regexp '(?i)^https://github\.com/laluowen/propsy/\.github/workflows/release\.yml@' \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com
 
 # Build provenance (which workflow run built it, from which commit):
-gh attestation verify propsy_linux_amd64.tar.gz --repo lalu-uk/propsy
-gh attestation verify oci://ghcr.io/lalu-uk/propsy:v4.3.0 --repo lalu-uk/propsy
+gh attestation verify propsy_linux_amd64.tar.gz --repo laluowen/propsy
+gh attestation verify oci://ghcr.io/laluowen/propsy:vX.Y.Z --repo laluowen/propsy
 ```
-<!-- x-release-please-end -->
 
 The identity is matched by regexp because the release workflow runs on `workflow_run`, so the
 certificate names the branch it ran on, not the tag.
 
-Releases are built to work with GitHub's immutable releases: release-please creates a draft
-release (with its tag), GoReleaser attaches every asset to it, and only then publishes it, at
-which point the assets and tag are frozen. A published version is permanent: a bad release is
-fixed by cutting a new version, not by editing the old one.
+The release flow is designed for GitHub immutable releases: release-please creates a draft
+release (with its tag), GoReleaser attaches every asset to it, and only then publishes it. Before
+the first release from the new owner, confirm that GitHub immutable releases are enforced there.
+Where they are enforced, a published version is permanent: fix a bad release by cutting a new
+version, not by editing the old one.
 
 To try a release build locally, skip the steps that need CI credentials:
 `goreleaser release --snapshot --clean --skip=sign` (add `docker` without buildx; syft must be on PATH).
